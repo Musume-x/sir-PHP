@@ -1,8 +1,15 @@
 <?php
 require __DIR__ . '/../layouts/staff_sidebar.php';
+require_once __DIR__ . '/../../../config/database.php';
+$pdo = $GLOBALS['pdo'] ?? null;
 $user = current_user();
 $role = ucfirst(current_role() ?? 'Staff');
 $sidebar = render_staff_sidebar();
+$patients = [];
+if ($pdo) {
+    $stmt = $pdo->query("SELECT id, name, email, created_at FROM users WHERE role = 'patient' ORDER BY name");
+    $patients = $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
+}
 ?>
 <div class="app-shell">
     <?php echo $sidebar; ?>
@@ -13,53 +20,40 @@ $sidebar = render_staff_sidebar();
                 <div class="search-bar">
                     <input type="text" placeholder="Search patients..." />
                 </div>
+                <div class="user-info">
+                    <span class="role"><?php echo $role; ?></span>
+                    <span class="name"><?php echo htmlspecialchars($user['name'] ?? $role); ?></span>
+                </div>
             </div>
         </header>
 
         <section class="panel">
             <div class="panel-header">
-                <h3>Assigned Patients</h3>
-                <select>
-                    <option>All</option>
-                    <option>Today</option>
-                    <option>This week</option>
-                </select>
+                <h3>Patients</h3>
             </div>
             <table class="data-table">
                 <thead>
                     <tr>
-                        <th>Patient</th>
-                        <th>Last Visit</th>
-                        <th>Primary Concern</th>
-                        <th>Status</th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Registered</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
+                    <?php foreach ($patients as $p): ?>
                     <tr>
-                        <td>Jacob Jones</td>
-                        <td>Nov 10, 2025</td>
-                        <td>Cardiology follow‑up</td>
-                        <td><span class="badge cyan">Active</span></td>
-                        <td><button class="btn-outline small">Open Chart</button></td>
+                        <td><?php echo htmlspecialchars($p['name']); ?></td>
+                        <td><?php echo htmlspecialchars($p['email']); ?></td>
+                        <td><?php echo htmlspecialchars($p['created_at'] ?? '—'); ?></td>
+                        <td><span class="btn-outline small">View Chart</span></td>
                     </tr>
-                    <tr>
-                        <td>Jenny Wilson</td>
-                        <td>Nov 8, 2025</td>
-                        <td>Diabetes check</td>
-                        <td><span class="badge cyan">Active</span></td>
-                        <td><button class="btn-outline small">Open Chart</button></td>
-                    </tr>
-                    <tr>
-                        <td>Brooklyn Simmons</td>
-                        <td>Nov 5, 2025</td>
-                        <td>Lab review</td>
-                        <td><span class="badge">Pending</span></td>
-                        <td><button class="btn-outline small">Open Chart</button></td>
-                    </tr>
+                    <?php endforeach; ?>
+                    <?php if (empty($patients)): ?>
+                    <tr><td colspan="4">No patients yet.</td></tr>
+                    <?php endif; ?>
                 </tbody>
             </table>
         </section>
     </main>
 </div>
-

@@ -8,7 +8,14 @@
         </div>
         <div class="auth-right">
             <h2>Welcome Back!</h2>
-            <p class="subtitle">Enter your email, password and select your role.</p>
+            <p class="subtitle">Sign in with your email and password.</p>
+
+            <?php if (!empty($_GET['error'])): ?>
+                <p class="auth-error">Invalid email or password.</p>
+            <?php endif; ?>
+            <?php if (!empty($_GET['success'])): ?>
+                <p class="auth-success">Registration successful. You can now log in.</p>
+            <?php endif; ?>
 
             <form method="post" class="auth-form">
                 <div class="form-group">
@@ -25,17 +32,6 @@
                         <span class="icon">••</span>
                         <input type="password" id="password" name="password" placeholder="Enter Password" required />
                     </div>
-                </div>
-
-                <div class="form-group">
-                    <label for="role">Login as</label>
-                    <select id="role" name="role" required>
-                        <option value="admin">Admin</option>
-                        <option value="doctor">Doctor</option>
-                        <option value="nurse">Nurse</option>
-                        <option value="receptionist">Receptionist</option>
-                        <option value="patient" selected>Patient</option>
-                    </select>
                 </div>
 
                 <div class="form-footer">
@@ -55,7 +51,7 @@
 
                 <p class="auth-register">
                     Don't have an account?
-                    <a href="#">Register Now</a>
+                    <a href="index.php?page=register">Register Now</a>
                 </p>
             </form>
         </div>

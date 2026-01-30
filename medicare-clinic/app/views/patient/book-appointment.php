@@ -1,7 +1,16 @@
-<?php 
+<?php
 require __DIR__ . '/../layouts/patient_sidebar.php';
+require_once __DIR__ . '/../../../config/database.php';
+$pdo = $GLOBALS['pdo'] ?? null;
 $user = current_user();
 $sidebar = render_patient_sidebar();
+$doctors = [];
+if ($pdo) {
+    $stmt = $pdo->query("SELECT id, name, department FROM users WHERE role = 'doctor' ORDER BY name");
+    $doctors = $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
+}
+$success = !empty($_GET['success']);
+$error = !empty($_GET['error']);
 ?>
 <div class="app-shell">
     <?php echo $sidebar; ?>
@@ -16,93 +25,75 @@ $sidebar = render_patient_sidebar();
             </div>
         </header>
 
-        <section class="grid-2">
-            <div class="panel">
-                <div class="panel-header">
-                    <h3>Select Doctor</h3>
-                </div>
-                <div style="padding: 20px;">
-                    <div class="form-group">
-                        <label>Department</label>
-                        <select>
-                            <option>All Departments</option>
-                            <option>Cardiology</option>
-                            <option>Pediatrics</option>
-                            <option>Orthopedics</option>
-                            <option>General Medicine</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Doctor</label>
-                        <select>
-                            <option>Select a doctor</option>
-                            <option>Dr. Jane Cooper - Cardiology</option>
-                            <option>Dr. Robert Smith - Pediatrics</option>
-                            <option>Dr. Michael Brown - Orthopedics</option>
-                            <option>Dr. Sarah Wilson - General Medicine</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Reason for Visit</label>
-                        <textarea placeholder="Describe your symptoms or reason for appointment..."></textarea>
-                    </div>
-                </div>
-            </div>
+        <?php if ($success): ?>
+            <p class="auth-success">Appointment booked successfully. Check My Appointments.</p>
+        <?php endif; ?>
+        <?php if ($error): ?>
+            <p class="auth-error">Please select a doctor, date, and time.</p>
+        <?php endif; ?>
 
-            <div class="panel">
-                <div class="panel-header">
-                    <h3>Select Date & Time</h3>
-                </div>
-                <div style="padding: 20px;">
-                    <div class="form-group">
-                        <label>Preferred Date</label>
-                        <input type="date" />
+        <form method="post" action="index.php?page=patient-book">
+            <input type="hidden" name="book_appointment" value="1" />
+            <section class="grid-2">
+                <div class="panel">
+                    <div class="panel-header">
+                        <h3>Select Doctor</h3>
                     </div>
-                    <div class="form-group">
-                        <label>Preferred Time</label>
-                        <select>
-                            <option>Select time</option>
-                            <option>08:00 AM</option>
-                            <option>09:00 AM</option>
-                            <option>10:00 AM</option>
-                            <option>11:00 AM</option>
-                            <option>02:00 PM</option>
-                            <option>03:00 PM</option>
-                            <option>04:00 PM</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Duration</label>
-                        <select>
-                            <option>30 minutes</option>
-                            <option>1 hour</option>
-                            <option>2 hours</option>
-                        </select>
-                    </div>
-                    <div style="margin-top: 20px;">
-                        <button class="btn-primary full">Book Appointment</button>
-                        <button class="btn-outline full" style="margin-top: 10px;">Check Availability</button>
+                    <div style="padding: 20px;">
+                        <div class="form-group">
+                            <label>Department</label>
+                            <select name="department">
+                                <option value="General">General</option>
+                                <option value="Cardiology">Cardiology</option>
+                                <option value="Pediatrics">Pediatrics</option>
+                                <option value="Orthopedics">Orthopedics</option>
+                                <option value="General Medicine">General Medicine</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Doctor</label>
+                            <select name="doctor_id" required>
+                                <option value="">Select a doctor</option>
+                                <?php foreach ($doctors as $d): ?>
+                                    <option value="<?php echo (int)$d['id']; ?>"><?php echo htmlspecialchars($d['name'] . ($d['department'] ? ' - ' . $d['department'] : '')); ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Reason for Visit</label>
+                            <textarea name="reason" placeholder="Describe your symptoms or reason for appointment..."></textarea>
+                        </div>
                     </div>
                 </div>
-            </div>
-        </section>
 
-        <section class="panel">
-            <div class="panel-header">
-                <h3>Available Time Slots - Dr. Jane Cooper</h3>
-                <span>Nov 15, 2025</span>
-            </div>
-            <div style="padding: 20px;">
-                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 12px;">
-                    <button class="btn-outline">08:00 AM</button>
-                    <button class="btn-outline">09:00 AM</button>
-                    <button class="btn-outline">10:00 AM</button>
-                    <button class="btn-outline">11:00 AM</button>
-                    <button class="btn-outline" style="opacity: 0.5; cursor: not-allowed;">02:00 PM</button>
-                    <button class="btn-outline">03:00 PM</button>
-                    <button class="btn-outline">04:00 PM</button>
+                <div class="panel">
+                    <div class="panel-header">
+                        <h3>Select Date & Time</h3>
+                    </div>
+                    <div style="padding: 20px;">
+                        <div class="form-group">
+                            <label>Preferred Date</label>
+                            <input type="date" name="appointment_date" required />
+                        </div>
+                        <div class="form-group">
+                            <label>Preferred Time</label>
+                            <select name="appointment_time" required>
+                                <option value="">Select time</option>
+                                <option value="08:00">08:00 AM</option>
+                                <option value="09:00">09:00 AM</option>
+                                <option value="10:00">10:00 AM</option>
+                                <option value="11:00">11:00 AM</option>
+                                <option value="14:00">02:00 PM</option>
+                                <option value="15:00">03:00 PM</option>
+                                <option value="16:00">04:00 PM</option>
+                            </select>
+                        </div>
+                        <div style="margin-top: 20px;">
+                            <button type="submit" class="btn-primary full">Book Appointment</button>
+                        </div>
+                    </div>
                 </div>
-            </div>
-        </section>
+            </section>
+        </form>
     </main>
 </div>

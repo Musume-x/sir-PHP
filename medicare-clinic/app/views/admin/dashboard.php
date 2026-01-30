@@ -1,7 +1,14 @@
-<?php 
+<?php
 require __DIR__ . '/../layouts/admin_sidebar.php';
+require_once __DIR__ . '/../../../config/database.php';
+$pdo = $GLOBALS['pdo'] ?? null;
 $user = current_user();
 $sidebar = render_admin_sidebar();
+
+$patientCount = 0;
+if ($pdo) {
+    $patientCount = $pdo->query("SELECT COUNT(*) FROM users WHERE role = 'patient'")->fetchColumn();
+}
 ?>
 <div class="app-shell">
     <?php echo $sidebar; ?>
@@ -30,14 +37,14 @@ $sidebar = render_admin_sidebar();
 
             <div class="summary-card">
                 <h4>Total Patients</h4>
-                <div class="summary-value">1,254</div>
-                <p class="summary-change">+58 this month</p>
+                <div class="summary-value"><?php echo $patientCount; ?></div>
+                <p class="summary-change">Example user(s)</p>
             </div>
 
             <div class="summary-card">
                 <h4>Appointments / Month</h4>
-                <div class="summary-value">3,492</div>
-                <p class="summary-change positive">+12%</p>
+                <div class="summary-value">0</div>
+                <p class="summary-change">—</p>
             </div>
         </section>
 
@@ -53,19 +60,9 @@ $sidebar = render_admin_sidebar();
                 </div>
                 <ul class="list-table">
                     <li>
-                        <span>New patient registered</span>
-                        <span>10:15 AM</span>
-                        <span>Receptionist</span>
-                    </li>
-                    <li>
-                        <span>Invoice generated</span>
-                        <span>09:42 AM</span>
-                        <span>Billing</span>
-                    </li>
-                    <li>
-                        <span>Doctor schedule updated</span>
-                        <span>09:10 AM</span>
-                        <span>Admin</span>
+                        <span>Database connected (SQLite)</span>
+                        <span>—</span>
+                        <span>System</span>
                     </li>
                 </ul>
             </div>
@@ -77,24 +74,10 @@ $sidebar = render_admin_sidebar();
                 <ul class="appointment-list">
                     <li>
                         <div>
-                            <strong>08:00 AM</strong>
-                            <p>John Doe · Cardiology</p>
+                            <strong>No appointments</strong>
+                            <p>Example data removed.</p>
                         </div>
-                        <span class="badge">Confirmed</span>
-                    </li>
-                    <li>
-                        <div>
-                            <strong>09:30 AM</strong>
-                            <p>Jane Smith · Pediatrics</p>
-                        </div>
-                        <span class="badge cyan">Checked-in</span>
-                    </li>
-                    <li>
-                        <div>
-                            <strong>11:15 AM</strong>
-                            <p>Michael Brown · Orthopedics</p>
-                        </div>
-                        <span class="badge">Pending</span>
+                        <span class="badge">—</span>
                     </li>
                 </ul>
             </div>

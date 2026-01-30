@@ -1,7 +1,23 @@
-<?php 
+<?php
 require __DIR__ . '/../layouts/admin_sidebar.php';
+require_once __DIR__ . '/../../../config/database.php';
+$pdo = $GLOBALS['pdo'] ?? null;
 $user = current_user();
 $sidebar = render_admin_sidebar();
+$appointments = [];
+$today = date('Y-m-d');
+if ($pdo) {
+    $stmt = $pdo->query("
+        SELECT a.*, u1.name as patient_name, u2.name as doctor_name
+        FROM appointments a
+        JOIN users u1 ON a.patient_id = u1.id
+        JOIN users u2 ON a.doctor_id = u2.id
+        ORDER BY a.appointment_date DESC, a.appointment_time DESC
+    ");
+    $appointments = $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
+}
+$todayCount = count(array_filter($appointments, fn($a) => $a['appointment_date'] === $today));
+$pendingCount = count(array_filter($appointments, fn($a) => $a['status'] === 'pending'));
 ?>
 <div class="app-shell">
     <?php echo $sidebar; ?>
@@ -12,7 +28,6 @@ $sidebar = render_admin_sidebar();
                 <div class="search-bar">
                     <input type="text" placeholder="Search appointments..." />
                 </div>
-                <button class="btn-primary">+ Create Appointment</button>
                 <div class="user-info">
                     <span class="role">Admin</span>
                     <span class="name"><?php echo htmlspecialchars($user['name'] ?? 'Admin'); ?></span>
@@ -23,118 +38,29 @@ $sidebar = render_admin_sidebar();
         <section class="grid-4">
             <div class="summary-card">
                 <h4>Today</h4>
-                <div class="summary-value">47</div>
+                <div class="summary-value"><?php echo $todayCount; ?></div>
                 <p class="summary-change">Appointments</p>
             </div>
             <div class="summary-card">
-                <h4>This Week</h4>
-                <div class="summary-value">312</div>
-                <p class="summary-change positive">+8%</p>
-            </div>
-            <div class="summary-card">
-                <h4>This Month</h4>
-                <div class="summary-value">3,492</div>
-                <p class="summary-change positive">+12%</p>
+                <h4>Total</h4>
+                <div class="summary-value"><?php echo count($appointments); ?></div>
+                <p class="summary-change">—</p>
             </div>
             <div class="summary-card">
                 <h4>Pending</h4>
-                <div class="summary-value">12</div>
-                <p class="summary-change">Requires action</p>
+                <div class="summary-value"><?php echo $pendingCount; ?></div>
+                <p class="summary-change">—</p>
             </div>
-        </section>
-
-        <section class="grid-2">
-            <div class="panel">
-                <div class="panel-header">
-                    <h3>Today's Appointments</h3>
-                    <select>
-                        <option>All Doctors</option>
-                        <option>Dr. Jane Cooper</option>
-                        <option>Dr. Robert Smith</option>
-                    </select>
-                </div>
-                <ul class="appointment-list">
-                    <li>
-                        <div>
-                            <strong>08:00 AM</strong>
-                            <p>John Doe · Cardiology · Dr. Jane Cooper</p>
-                        </div>
-                        <span class="badge">Confirmed</span>
-                    </li>
-                    <li>
-                        <div>
-                            <strong>09:30 AM</strong>
-                            <p>Jane Smith · Pediatrics · Dr. Robert Smith</p>
-                        </div>
-                        <span class="badge cyan">Checked-in</span>
-                    </li>
-                    <li>
-                        <div>
-                            <strong>11:15 AM</strong>
-                            <p>Michael Brown · Orthopedics · Dr. Jane Cooper</p>
-                        </div>
-                        <span class="badge">Pending</span>
-                    </li>
-                    <li>
-                        <div>
-                            <strong>02:00 PM</strong>
-                            <p>Sarah Johnson · General · Dr. Robert Smith</p>
-                        </div>
-                        <span class="badge">Confirmed</span>
-                    </li>
-                </ul>
-            </div>
-
-            <div class="panel">
-                <div class="panel-header">
-                    <h3>Upcoming Appointments</h3>
-                    <select>
-                        <option>Next 7 days</option>
-                        <option>Next 30 days</option>
-                    </select>
-                </div>
-                <ul class="appointment-list">
-                    <li>
-                        <div>
-                            <strong>Nov 13, 10:00 AM</strong>
-                            <p>David Lee · Cardiology</p>
-                        </div>
-                        <span class="badge">Scheduled</span>
-                    </li>
-                    <li>
-                        <div>
-                            <strong>Nov 13, 2:30 PM</strong>
-                            <p>Emma Wilson · Pediatrics</p>
-                        </div>
-                        <span class="badge">Scheduled</span>
-                    </li>
-                    <li>
-                        <div>
-                            <strong>Nov 14, 9:00 AM</strong>
-                            <p>Robert Taylor · General</p>
-                        </div>
-                        <span class="badge">Scheduled</span>
-                    </li>
-                </ul>
+            <div class="summary-card">
+                <h4>—</h4>
+                <div class="summary-value">—</div>
+                <p class="summary-change">—</p>
             </div>
         </section>
 
         <section class="panel">
             <div class="panel-header">
                 <h3>All Appointments</h3>
-                <div style="display: flex; gap: 12px;">
-                    <select>
-                        <option>All Status</option>
-                        <option>Confirmed</option>
-                        <option>Pending</option>
-                        <option>Cancelled</option>
-                    </select>
-                    <select>
-                        <option>All Doctors</option>
-                        <option>Dr. Jane Cooper</option>
-                        <option>Dr. Robert Smith</option>
-                    </select>
-                </div>
             </div>
             <table class="data-table">
                 <thead>
@@ -143,44 +69,24 @@ $sidebar = render_admin_sidebar();
                         <th>Patient</th>
                         <th>Doctor</th>
                         <th>Department</th>
+                        <th>Reason</th>
                         <th>Status</th>
-                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
+                    <?php foreach ($appointments as $a): ?>
                     <tr>
-                        <td>Nov 12, 2025<br>08:00 AM</td>
-                        <td>John Doe</td>
-                        <td>Dr. Jane Cooper</td>
-                        <td>Cardiology</td>
-                        <td><span class="badge">Confirmed</span></td>
-                        <td>
-                            <button class="btn-outline small">View</button>
-                            <button class="btn-outline small">Edit</button>
-                        </td>
+                        <td><?php echo htmlspecialchars($a['appointment_date']); ?> <?php echo htmlspecialchars($a['appointment_time']); ?></td>
+                        <td><?php echo htmlspecialchars($a['patient_name'] ?? '—'); ?></td>
+                        <td><?php echo htmlspecialchars($a['doctor_name'] ?? '—'); ?></td>
+                        <td><?php echo htmlspecialchars($a['department'] ?? '—'); ?></td>
+                        <td><?php echo htmlspecialchars($a['reason'] ?? '—'); ?></td>
+                        <td><span class="badge <?php echo $a['status'] === 'confirmed' || $a['status'] === 'completed' ? 'cyan' : ''; ?>"><?php echo htmlspecialchars($a['status']); ?></span></td>
                     </tr>
-                    <tr>
-                        <td>Nov 12, 2025<br>09:30 AM</td>
-                        <td>Jane Smith</td>
-                        <td>Dr. Robert Smith</td>
-                        <td>Pediatrics</td>
-                        <td><span class="badge cyan">Checked-in</span></td>
-                        <td>
-                            <button class="btn-outline small">View</button>
-                            <button class="btn-outline small">Edit</button>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>Nov 12, 2025<br>11:15 AM</td>
-                        <td>Michael Brown</td>
-                        <td>Dr. Jane Cooper</td>
-                        <td>Orthopedics</td>
-                        <td><span class="badge">Pending</span></td>
-                        <td>
-                            <button class="btn-outline small">View</button>
-                            <button class="btn-outline small">Edit</button>
-                        </td>
-                    </tr>
+                    <?php endforeach; ?>
+                    <?php if (empty($appointments)): ?>
+                    <tr><td colspan="6">No appointments yet.</td></tr>
+                    <?php endif; ?>
                 </tbody>
             </table>
         </section>

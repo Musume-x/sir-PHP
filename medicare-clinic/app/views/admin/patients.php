@@ -1,7 +1,17 @@
-<?php 
+<?php
 require __DIR__ . '/../layouts/admin_sidebar.php';
+require_once __DIR__ . '/../../../config/database.php';
+$pdo = $GLOBALS['pdo'] ?? null;
 $user = current_user();
 $sidebar = render_admin_sidebar();
+
+$patients = [];
+if ($pdo) {
+    $stmt = $pdo->prepare("SELECT id, name, email, role, created_at FROM users WHERE role = 'patient' ORDER BY id");
+    $stmt->execute();
+    $patients = $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+$patientCount = count($patients);
 ?>
 <div class="app-shell">
     <?php echo $sidebar; ?>
@@ -23,22 +33,22 @@ $sidebar = render_admin_sidebar();
         <section class="grid-4">
             <div class="summary-card">
                 <h4>Total Patients</h4>
-                <div class="summary-value">1,254</div>
-                <p class="summary-change">+58 this month</p>
+                <div class="summary-value"><?php echo $patientCount; ?></div>
+                <p class="summary-change">Example user</p>
             </div>
             <div class="summary-card">
                 <h4>New This Week</h4>
-                <div class="summary-value">42</div>
-                <p class="summary-change positive">+12%</p>
+                <div class="summary-value"><?php echo $patientCount; ?></div>
+                <p class="summary-change">—</p>
             </div>
             <div class="summary-card">
                 <h4>Active Today</h4>
-                <div class="summary-value">89</div>
+                <div class="summary-value">0</div>
                 <p class="summary-change">Appointments</p>
             </div>
             <div class="summary-card">
                 <h4>Pending</h4>
-                <div class="summary-value">23</div>
+                <div class="summary-value">0</div>
                 <p class="summary-change">Registrations</p>
             </div>
         </section>
@@ -65,66 +75,26 @@ $sidebar = render_admin_sidebar();
                         <th>Patient ID</th>
                         <th>Name</th>
                         <th>Email</th>
-                        <th>Phone</th>
-                        <th>Age</th>
-                        <th>Last Visit</th>
                         <th>Status</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
+                    <?php foreach ($patients as $i => $p): ?>
                     <tr>
-                        <td>#MC-001</td>
-                        <td>Michael Brown</td>
-                        <td>michael.brown@email.com</td>
-                        <td>(555) 123-4567</td>
-                        <td>45</td>
-                        <td>Nov 12, 2025</td>
+                        <td>#MC-<?php echo str_pad((string)($i + 1), 3, '0', STR_PAD_LEFT); ?></td>
+                        <td><?php echo htmlspecialchars($p['name']); ?></td>
+                        <td><?php echo htmlspecialchars($p['email']); ?></td>
                         <td><span class="badge cyan">Active</span></td>
                         <td>
                             <button class="btn-outline small">View</button>
                             <button class="btn-outline small">Edit</button>
                         </td>
                     </tr>
-                    <tr>
-                        <td>#MC-002</td>
-                        <td>Sarah Johnson</td>
-                        <td>sarah.j@email.com</td>
-                        <td>(555) 234-5678</td>
-                        <td>32</td>
-                        <td>Nov 10, 2025</td>
-                        <td><span class="badge cyan">Active</span></td>
-                        <td>
-                            <button class="btn-outline small">View</button>
-                            <button class="btn-outline small">Edit</button>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>#MC-003</td>
-                        <td>David Lee</td>
-                        <td>david.lee@email.com</td>
-                        <td>(555) 345-6789</td>
-                        <td>28</td>
-                        <td>Nov 8, 2025</td>
-                        <td><span class="badge cyan">Active</span></td>
-                        <td>
-                            <button class="btn-outline small">View</button>
-                            <button class="btn-outline small">Edit</button>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>#MC-004</td>
-                        <td>Emma Wilson</td>
-                        <td>emma.w@email.com</td>
-                        <td>(555) 456-7890</td>
-                        <td>55</td>
-                        <td>Oct 25, 2025</td>
-                        <td><span class="badge">Inactive</span></td>
-                        <td>
-                            <button class="btn-outline small">View</button>
-                            <button class="btn-outline small">Edit</button>
-                        </td>
-                    </tr>
+                    <?php endforeach; ?>
+                    <?php if (empty($patients)): ?>
+                    <tr><td colspan="5">No patients in database.</td></tr>
+                    <?php endif; ?>
                 </tbody>
             </table>
         </section>

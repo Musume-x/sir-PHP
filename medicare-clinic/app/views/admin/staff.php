@@ -1,7 +1,20 @@
-<?php 
+<?php
 require __DIR__ . '/../layouts/admin_sidebar.php';
+require_once __DIR__ . '/../../../config/database.php';
+$pdo = $GLOBALS['pdo'] ?? null;
 $user = current_user();
 $sidebar = render_admin_sidebar();
+
+$staff = [];
+if ($pdo) {
+    $stmt = $pdo->prepare("SELECT id, name, email, role FROM users WHERE role IN ('doctor','nurse','receptionist') ORDER BY role");
+    $stmt->execute();
+    $staff = $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+$counts = array_count_values(array_column($staff, 'role'));
+$doctorCount = $counts['doctor'] ?? 0;
+$nurseCount = $counts['nurse'] ?? 0;
+$receptionistCount = $counts['receptionist'] ?? 0;
 ?>
 <div class="app-shell">
     <?php echo $sidebar; ?>
@@ -23,18 +36,18 @@ $sidebar = render_admin_sidebar();
         <section class="grid-3">
             <div class="summary-card">
                 <h4>Total Doctors</h4>
-                <div class="summary-value">24</div>
-                <p class="summary-change">+2 this month</p>
+                <div class="summary-value"><?php echo $doctorCount; ?></div>
+                <p class="summary-change">Example user</p>
             </div>
             <div class="summary-card">
                 <h4>Total Nurses</h4>
-                <div class="summary-value">18</div>
-                <p class="summary-change">+1 this month</p>
+                <div class="summary-value"><?php echo $nurseCount; ?></div>
+                <p class="summary-change">Example user</p>
             </div>
             <div class="summary-card">
                 <h4>Receptionists</h4>
-                <div class="summary-value">8</div>
-                <p class="summary-change">No change</p>
+                <div class="summary-value"><?php echo $receptionistCount; ?></div>
+                <p class="summary-change">Example user</p>
             </div>
         </section>
 
@@ -54,61 +67,28 @@ $sidebar = render_admin_sidebar();
                         <th>Name</th>
                         <th>Role</th>
                         <th>Department</th>
-                        <th>Specialty</th>
-                        <th>Schedule</th>
+                        <th>Email</th>
                         <th>Status</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
+                    <?php foreach ($staff as $s): ?>
                     <tr>
-                        <td>Dr. Jane Cooper</td>
-                        <td><span class="badge">Doctor</span></td>
-                        <td>Cardiology</td>
-                        <td>Cardiac Surgery</td>
-                        <td>Mon-Fri, 9AM-5PM</td>
+                        <td><?php echo htmlspecialchars($s['name']); ?></td>
+                        <td><span class="badge"><?php echo htmlspecialchars(ucfirst($s['role'])); ?></span></td>
+                        <td><?php echo $s['role'] === 'doctor' ? 'General' : ($s['role'] === 'nurse' ? 'General' : 'Front Desk'); ?></td>
+                        <td><?php echo htmlspecialchars($s['email']); ?></td>
                         <td><span class="badge cyan">Active</span></td>
                         <td>
                             <button class="btn-outline small">Edit</button>
                             <button class="btn-outline small">Schedule</button>
                         </td>
                     </tr>
-                    <tr>
-                        <td>Dr. Robert Smith</td>
-                        <td><span class="badge">Doctor</span></td>
-                        <td>Pediatrics</td>
-                        <td>Child Care</td>
-                        <td>Mon-Wed, 8AM-4PM</td>
-                        <td><span class="badge cyan">Active</span></td>
-                        <td>
-                            <button class="btn-outline small">Edit</button>
-                            <button class="btn-outline small">Schedule</button>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>Sarah Wilson</td>
-                        <td><span class="badge">Nurse</span></td>
-                        <td>General</td>
-                        <td>-</td>
-                        <td>Mon-Fri, 7AM-3PM</td>
-                        <td><span class="badge cyan">Active</span></td>
-                        <td>
-                            <button class="btn-outline small">Edit</button>
-                            <button class="btn-outline small">Assign</button>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>Emily Davis</td>
-                        <td><span class="badge">Receptionist</td>
-                        <td>Front Desk</td>
-                        <td>-</td>
-                        <td>Mon-Fri, 8AM-6PM</td>
-                        <td><span class="badge cyan">Active</span></td>
-                        <td>
-                            <button class="btn-outline small">Edit</button>
-                            <button class="btn-outline small">Assign</button>
-                        </td>
-                    </tr>
+                    <?php endforeach; ?>
+                    <?php if (empty($staff)): ?>
+                    <tr><td colspan="6">No staff in database.</td></tr>
+                    <?php endif; ?>
                 </tbody>
             </table>
         </section>

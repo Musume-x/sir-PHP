@@ -1,7 +1,22 @@
-<?php 
+<?php
 require __DIR__ . '/../layouts/patient_sidebar.php';
+require_once __DIR__ . '/../../../config/database.php';
+$pdo = $GLOBALS['pdo'] ?? null;
 $user = current_user();
 $sidebar = render_patient_sidebar();
+$records = [];
+if ($pdo && $user) {
+    $pid = (int) $user['id'];
+    $stmt = $pdo->prepare("
+        SELECT m.*, u.name as doctor_name
+        FROM medical_records m
+        LEFT JOIN users u ON m.doctor_id = u.id
+        WHERE m.patient_id = ?
+        ORDER BY m.created_at DESC
+    ");
+    $stmt->execute([$pid]);
+    $records = $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
 ?>
 <div class="app-shell">
     <?php echo $sidebar; ?>
@@ -22,108 +37,24 @@ $sidebar = render_patient_sidebar();
         <section class="grid-3">
             <div class="summary-card">
                 <h4>Total Records</h4>
-                <div class="summary-value">18</div>
+                <div class="summary-value"><?php echo count($records); ?></div>
                 <p class="summary-change">Medical files</p>
             </div>
             <div class="summary-card">
-                <h4>This Year</h4>
-                <div class="summary-value">12</div>
-                <p class="summary-change">2025 records</p>
+                <h4>—</h4>
+                <div class="summary-value">—</div>
+                <p class="summary-change">—</p>
             </div>
             <div class="summary-card">
-                <h4>Lab Results</h4>
-                <div class="summary-value">5</div>
-                <p class="summary-change">Available</p>
-            </div>
-        </section>
-
-        <section class="grid-2">
-            <div class="panel">
-                <div class="panel-header">
-                    <h3>Recent Records</h3>
-                </div>
-                <ul class="list-table">
-                    <li>
-                        <span>
-                            <strong>Cardiology Consultation</strong><br>
-                            <span style="font-size: 0.85rem; color: var(--mc-gray);">Dr. Jane Cooper · Nov 12, 2025</span>
-                        </span>
-                        <span>
-                            <button class="btn-outline small">View</button>
-                            <button class="btn-outline small">Download</button>
-                        </span>
-                    </li>
-                    <li>
-                        <span>
-                            <strong>Laboratory Tests</strong><br>
-                            <span style="font-size: 0.85rem; color: var(--mc-gray);">Blood Work · Nov 10, 2025</span>
-                        </span>
-                        <span>
-                            <button class="btn-outline small">View</button>
-                            <button class="btn-outline small">Download</button>
-                        </span>
-                    </li>
-                    <li>
-                        <span>
-                            <strong>General Check-up</strong><br>
-                            <span style="font-size: 0.85rem; color: var(--mc-gray);">Dr. Sarah Wilson · Nov 8, 2025</span>
-                        </span>
-                        <span>
-                            <button class="btn-outline small">View</button>
-                            <button class="btn-outline small">Download</button>
-                        </span>
-                    </li>
-                </ul>
-            </div>
-
-            <div class="panel">
-                <div class="panel-header">
-                    <h3>Lab Results</h3>
-                </div>
-                <ul class="list-table">
-                    <li>
-                        <span>
-                            <strong>Complete Blood Count</strong><br>
-                            <span style="font-size: 0.85rem; color: var(--mc-gray);">Nov 10, 2025</span>
-                        </span>
-                        <span>
-                            <button class="btn-outline small">View</button>
-                            <button class="btn-outline small">Download</button>
-                        </span>
-                    </li>
-                    <li>
-                        <span>
-                            <strong>Cholesterol Panel</strong><br>
-                            <span style="font-size: 0.85rem; color: var(--mc-gray);">Oct 15, 2025</span>
-                        </span>
-                        <span>
-                            <button class="btn-outline small">View</button>
-                            <button class="btn-outline small">Download</button>
-                        </span>
-                    </li>
-                    <li>
-                        <span>
-                            <strong>X-Ray - Chest</strong><br>
-                            <span style="font-size: 0.85rem; color: var(--mc-gray);">Sep 21, 2025</span>
-                        </span>
-                        <span>
-                            <button class="btn-outline small">View</button>
-                            <button class="btn-outline small">Download</button>
-                        </span>
-                    </li>
-                </ul>
+                <h4>—</h4>
+                <div class="summary-value">—</div>
+                <p class="summary-change">—</p>
             </div>
         </section>
 
         <section class="panel">
             <div class="panel-header">
                 <h3>All Medical Records</h3>
-                <select>
-                    <option>All Types</option>
-                    <option>Consultations</option>
-                    <option>Lab Results</option>
-                    <option>Diagnostics</option>
-                </select>
             </div>
             <table class="data-table">
                 <thead>
@@ -132,55 +63,25 @@ $sidebar = render_patient_sidebar();
                         <th>Type</th>
                         <th>Doctor/Provider</th>
                         <th>Description</th>
-                        <th>Status</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
+                    <?php foreach ($records as $r): ?>
                     <tr>
-                        <td>Nov 12, 2025</td>
-                        <td>Consultation</td>
-                        <td>Dr. Jane Cooper</td>
-                        <td>Cardiology Consultation</td>
-                        <td><span class="badge cyan">Completed</span></td>
+                        <td><?php echo htmlspecialchars($r['created_at']); ?></td>
+                        <td><?php echo htmlspecialchars($r['record_type']); ?></td>
+                        <td><?php echo htmlspecialchars($r['doctor_name'] ?? '—'); ?></td>
+                        <td><?php echo htmlspecialchars($r['description']); ?></td>
                         <td>
-                            <button class="btn-outline small">View</button>
-                            <button class="btn-outline small">Download</button>
+                            <a href="index.php?page=patient-view&type=record&id=<?php echo (int)$r['id']; ?>" class="btn-outline small">View</a>
+                            <a href="index.php?page=patient-download&type=record&id=<?php echo (int)$r['id']; ?>" class="btn-outline small">Download</a>
                         </td>
                     </tr>
-                    <tr>
-                        <td>Nov 10, 2025</td>
-                        <td>Lab Results</td>
-                        <td>Lab Services</td>
-                        <td>Complete Blood Count</td>
-                        <td><span class="badge cyan">Available</span></td>
-                        <td>
-                            <button class="btn-outline small">View</button>
-                            <button class="btn-outline small">Download</button>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>Nov 8, 2025</td>
-                        <td>Consultation</td>
-                        <td>Dr. Sarah Wilson</td>
-                        <td>General Check-up</td>
-                        <td><span class="badge cyan">Completed</span></td>
-                        <td>
-                            <button class="btn-outline small">View</button>
-                            <button class="btn-outline small">Download</button>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>Oct 15, 2025</td>
-                        <td>Lab Results</td>
-                        <td>Lab Services</td>
-                        <td>Cholesterol Panel</td>
-                        <td><span class="badge cyan">Available</span></td>
-                        <td>
-                            <button class="btn-outline small">View</button>
-                            <button class="btn-outline small">Download</button>
-                        </td>
-                    </tr>
+                    <?php endforeach; ?>
+                    <?php if (empty($records)): ?>
+                    <tr><td colspan="5">No medical records yet.</td></tr>
+                    <?php endif; ?>
                 </tbody>
             </table>
         </section>

@@ -22,18 +22,18 @@ $sidebar = render_staff_sidebar();
         <section class="grid-3">
             <div class="summary-card">
                 <h4>Today's Appointments</h4>
-                <div class="summary-value">14</div>
-                <p class="summary-change positive">+3 new</p>
+                <div class="summary-value">0</div>
+                <p class="summary-change">—</p>
             </div>
             <div class="summary-card">
                 <h4>Assigned Patients</h4>
-                <div class="summary-value">32</div>
-                <p class="summary-change">5 waiting</p>
+                <div class="summary-value">0</div>
+                <p class="summary-change">—</p>
             </div>
             <div class="summary-card">
                 <h4>Pending Tasks</h4>
-                <div class="summary-value">7</div>
-                <p class="summary-change">2 lab reviews</p>
+                <div class="summary-value">0</div>
+                <p class="summary-change">—</p>
             </div>
         </section>
 
@@ -45,24 +45,9 @@ $sidebar = render_staff_sidebar();
                 <ul class="appointment-list compact">
                     <li>
                         <div>
-                            <strong>09:00 AM</strong>
-                            <p>Savannah Nguyen · 2h</p>
+                            <strong>No appointments</strong>
+                            <p>Example data removed.</p>
                         </div>
-                        <button class="btn-outline small">Open</button>
-                    </li>
-                    <li>
-                        <div>
-                            <strong>10:15 AM</strong>
-                            <p>Dianne Russell · 1h</p>
-                        </div>
-                        <button class="btn-outline small">Open</button>
-                    </li>
-                    <li>
-                        <div>
-                            <strong>11:15 AM</strong>
-                            <p>Ronald Richards · 1h</p>
-                        </div>
-                        <button class="btn-outline small">Open</button>
                     </li>
                 </ul>
             </div>
@@ -73,19 +58,9 @@ $sidebar = render_staff_sidebar();
                 </div>
                 <ul class="list-table">
                     <li>
-                        <span>Jacob Jones</span>
-                        <span>BP: 120/80</span>
-                        <span>Temp: 36.8°C</span>
-                    </li>
-                    <li>
-                        <span>Jenny Wilson</span>
-                        <span>BP: 118/76</span>
-                        <span>Temp: 37.1°C</span>
-                    </li>
-                    <li>
-                        <span>Brooklyn Simmons</span>
-                        <span>BP: 130/85</span>
-                        <span>Temp: 36.9°C</span>
+                        <span>No assigned patients. Example data removed.</span>
+                        <span>—</span>
+                        <span>—</span>
                     </li>
                 </ul>
             </div>

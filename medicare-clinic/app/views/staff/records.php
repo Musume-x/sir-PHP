@@ -1,8 +1,21 @@
 <?php
 require __DIR__ . '/../layouts/staff_sidebar.php';
+require_once __DIR__ . '/../../../config/database.php';
+$pdo = $GLOBALS['pdo'] ?? null;
 $user = current_user();
 $role = ucfirst(current_role() ?? 'Staff');
 $sidebar = render_staff_sidebar();
+$records = [];
+if ($pdo) {
+    $stmt = $pdo->query("
+        SELECT m.*, u1.name as patient_name, u2.name as doctor_name
+        FROM medical_records m
+        JOIN users u1 ON m.patient_id = u1.id
+        LEFT JOIN users u2 ON m.doctor_id = u2.id
+        ORDER BY m.created_at DESC
+    ");
+    $records = $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
+}
 ?>
 <div class="app-shell">
     <?php echo $sidebar; ?>
@@ -10,19 +23,16 @@ $sidebar = render_staff_sidebar();
         <header class="main-header">
             <h1><?php echo $role; ?> Medical Records</h1>
             <div class="header-right">
-                <button class="btn-primary">+ New Note</button>
+                <div class="user-info">
+                    <span class="role"><?php echo $role; ?></span>
+                    <span class="name"><?php echo htmlspecialchars($user['name'] ?? $role); ?></span>
+                </div>
             </div>
         </header>
 
         <section class="panel">
             <div class="panel-header">
-                <h3>Recent Records</h3>
-                <select>
-                    <option>All Types</option>
-                    <option>Consultations</option>
-                    <option>Lab Results</option>
-                    <option>Prescriptions</option>
-                </select>
+                <h3>Medical Records</h3>
             </div>
             <table class="data-table">
                 <thead>
@@ -30,35 +40,25 @@ $sidebar = render_staff_sidebar();
                         <th>Patient</th>
                         <th>Type</th>
                         <th>Date</th>
-                        <th>Summary</th>
-                        <th>Actions</th>
+                        <th>Description</th>
+                        <th>Doctor</th>
                     </tr>
                 </thead>
                 <tbody>
+                    <?php foreach ($records as $r): ?>
                     <tr>
-                        <td>Michael Brown</td>
-                        <td>Consultation</td>
-                        <td>Nov 12, 2025</td>
-                        <td>Follow‑up for chest pain, medication adjusted.</td>
-                        <td><button class="btn-outline small">View</button></td>
+                        <td><?php echo htmlspecialchars($r['patient_name'] ?? '—'); ?></td>
+                        <td><?php echo htmlspecialchars($r['record_type']); ?></td>
+                        <td><?php echo htmlspecialchars($r['created_at']); ?></td>
+                        <td><?php echo htmlspecialchars($r['description']); ?></td>
+                        <td><?php echo htmlspecialchars($r['doctor_name'] ?? '—'); ?></td>
                     </tr>
-                    <tr>
-                        <td>Sarah Johnson</td>
-                        <td>Lab Results</td>
-                        <td>Nov 10, 2025</td>
-                        <td>Blood work stable, continue current plan.</td>
-                        <td><button class="btn-outline small">View</button></td>
-                    </tr>
-                    <tr>
-                        <td>David Lee</td>
-                        <td>Consultation</td>
-                        <td>Nov 8, 2025</td>
-                        <td>Discussed lifestyle changes, schedule follow‑up.</td>
-                        <td><button class="btn-outline small">View</button></td>
-                    </tr>
+                    <?php endforeach; ?>
+                    <?php if (empty($records)): ?>
+                    <tr><td colspan="5">No medical records yet.</td></tr>
+                    <?php endif; ?>
                 </tbody>
             </table>
         </section>
     </main>
 </div>
-

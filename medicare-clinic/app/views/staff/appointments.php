@@ -1,8 +1,24 @@
 <?php
 require __DIR__ . '/../layouts/staff_sidebar.php';
+require_once __DIR__ . '/../../../config/database.php';
+$pdo = $GLOBALS['pdo'] ?? null;
 $user = current_user();
 $role = ucfirst(current_role() ?? 'Staff');
 $sidebar = render_staff_sidebar();
+$appointments = [];
+$today = date('Y-m-d');
+if ($pdo) {
+    $stmt = $pdo->query("
+        SELECT a.*, u1.name as patient_name, u2.name as doctor_name
+        FROM appointments a
+        JOIN users u1 ON a.patient_id = u1.id
+        JOIN users u2 ON a.doctor_id = u2.id
+        ORDER BY a.appointment_date, a.appointment_time
+    ");
+    $appointments = $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
+}
+$todayAppointments = array_filter($appointments, fn($a) => $a['appointment_date'] === $today);
+$upcoming = array_filter($appointments, fn($a) => $a['appointment_date'] >= $today && !in_array($a['status'], ['cancelled', 'completed'], true));
 ?>
 <div class="app-shell">
     <?php echo $sidebar; ?>
@@ -13,7 +29,10 @@ $sidebar = render_staff_sidebar();
                 <div class="search-bar">
                     <input type="text" placeholder="Search appointments..." />
                 </div>
-                <button class="btn-primary">+ New Appointment</button>
+                <div class="user-info">
+                    <span class="role"><?php echo $role; ?></span>
+                    <span class="name"><?php echo htmlspecialchars($user['name'] ?? $role); ?></span>
+                </div>
             </div>
         </header>
 
@@ -21,63 +40,74 @@ $sidebar = render_staff_sidebar();
             <div class="panel">
                 <div class="panel-header">
                     <h3>Today's Appointments</h3>
-                    <select>
-                        <option>All</option>
-                        <option>Morning</option>
-                        <option>Afternoon</option>
-                    </select>
                 </div>
                 <ul class="appointment-list compact">
+                    <?php foreach (array_slice($todayAppointments, 0, 10) as $a): ?>
                     <li>
                         <div>
-                            <strong>09:00 AM</strong>
-                            <p>Jacob Jones · Initial Visit</p>
+                            <strong><?php echo htmlspecialchars($a['appointment_time']); ?></strong>
+                            <p><?php echo htmlspecialchars($a['patient_name']); ?> · <?php echo htmlspecialchars($a['reason'] ?: '—'); ?></p>
                         </div>
-                        <button class="btn-outline small">Open</button>
+                        <span class="badge <?php echo $a['status'] === 'confirmed' ? 'cyan' : ''; ?>"><?php echo htmlspecialchars($a['status']); ?></span>
                     </li>
-                    <li>
-                        <div>
-                            <strong>10:15 AM</strong>
-                            <p>Jenny Wilson · Follow‑up</p>
-                        </div>
-                        <button class="btn-outline small">Open</button>
-                    </li>
-                    <li>
-                        <div>
-                            <strong>11:30 AM</strong>
-                            <p>Brooklyn Simmons · Lab review</p>
-                        </div>
-                        <button class="btn-outline small">Open</button>
-                    </li>
+                    <?php endforeach; ?>
+                    <?php if (empty($todayAppointments)): ?>
+                    <li><div><strong>No appointments today</strong></div></li>
+                    <?php endif; ?>
                 </ul>
             </div>
-
             <div class="panel">
                 <div class="panel-header">
                     <h3>Upcoming</h3>
-                    <select>
-                        <option>Next 7 days</option>
-                        <option>Next 30 days</option>
-                    </select>
                 </div>
                 <ul class="appointment-list compact">
+                    <?php foreach (array_slice($upcoming, 0, 5) as $a): ?>
                     <li>
                         <div>
-                            <strong>Tomorrow · 08:30 AM</strong>
-                            <p>Leslie Alexander · General check‑up</p>
+                            <strong><?php echo htmlspecialchars($a['appointment_date']); ?> · <?php echo htmlspecialchars($a['appointment_time']); ?></strong>
+                            <p><?php echo htmlspecialchars($a['patient_name']); ?> · <?php echo htmlspecialchars($a['department'] ?? '—'); ?></p>
                         </div>
-                        <span class="badge">Scheduled</span>
+                        <span class="badge"><?php echo htmlspecialchars($a['status']); ?></span>
                     </li>
-                    <li>
-                        <div>
-                            <strong>Fri · 02:00 PM</strong>
-                            <p>Arlene McCoy · Cardiology</p>
-                        </div>
-                        <span class="badge">Scheduled</span>
-                    </li>
+                    <?php endforeach; ?>
+                    <?php if (empty($upcoming)): ?>
+                    <li><div><strong>No upcoming appointments</strong></div></li>
+                    <?php endif; ?>
                 </ul>
             </div>
         </section>
+
+        <section class="panel">
+            <div class="panel-header">
+                <h3>All Appointments</h3>
+            </div>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Date & Time</th>
+                        <th>Patient</th>
+                        <th>Doctor</th>
+                        <th>Department</th>
+                        <th>Reason</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($appointments as $a): ?>
+                    <tr>
+                        <td><?php echo htmlspecialchars($a['appointment_date']); ?> <?php echo htmlspecialchars($a['appointment_time']); ?></td>
+                        <td><?php echo htmlspecialchars($a['patient_name'] ?? '—'); ?></td>
+                        <td><?php echo htmlspecialchars($a['doctor_name'] ?? '—'); ?></td>
+                        <td><?php echo htmlspecialchars($a['department'] ?? '—'); ?></td>
+                        <td><?php echo htmlspecialchars($a['reason'] ?? '—'); ?></td>
+                        <td><span class="badge <?php echo $a['status'] === 'confirmed' || $a['status'] === 'completed' ? 'cyan' : ''; ?>"><?php echo htmlspecialchars($a['status']); ?></span></td>
+                    </tr>
+                    <?php endforeach; ?>
+                    <?php if (empty($appointments)): ?>
+                    <tr><td colspan="6">No appointments yet.</td></tr>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </section>
     </main>
 </div>
-

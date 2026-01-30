@@ -1,7 +1,31 @@
-<?php 
+<?php
 require __DIR__ . '/../layouts/patient_sidebar.php';
+require_once __DIR__ . '/../../../config/database.php';
+$pdo = $GLOBALS['pdo'] ?? null;
 $user = current_user();
 $sidebar = render_patient_sidebar();
+$invoices = [];
+$totalDue = 0;
+$paidThisMonth = 0;
+if ($pdo && $user) {
+    $pid = (int) $user['id'];
+    $stmt = $pdo->prepare("SELECT * FROM invoices WHERE patient_id = ? ORDER BY created_at DESC");
+    $stmt->execute([$pid]);
+    $invoices = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    foreach ($invoices as $inv) {
+        if ($inv['status'] === 'pending' || $inv['status'] === 'overdue') {
+            $totalDue += (float) $inv['amount'];
+        }
+        if ($inv['status'] === 'paid' && $inv['paid_at'] && date('Y-m', strtotime($inv['paid_at'])) === date('Y-m')) {
+            $paidThisMonth += (float) $inv['amount'];
+        }
+    }
+    $stmt = $pdo->query("SELECT COALESCE(SUM(amount),0) as total FROM invoices WHERE patient_id = $pid AND status = 'paid'");
+    $allTimePaid = (float) ($stmt->fetch(PDO::FETCH_ASSOC)['total'] ?? 0);
+} else {
+    $allTimePaid = 0;
+}
+$paid = !empty($_GET['paid']);
 ?>
 <div class="app-shell">
     <?php echo $sidebar; ?>
@@ -19,91 +43,31 @@ $sidebar = render_patient_sidebar();
             </div>
         </header>
 
+        <?php if ($paid): ?>
+            <p class="auth-success">Payment recorded successfully.</p>
+        <?php endif; ?>
+
         <section class="grid-3">
             <div class="summary-card">
                 <h4>Total Due</h4>
-                <div class="summary-value">$120</div>
-                <p class="summary-change">This month</p>
+                <div class="summary-value">$<?php echo number_format($totalDue, 0); ?></div>
+                <p class="summary-change">Pending</p>
             </div>
             <div class="summary-card">
                 <h4>Paid This Month</h4>
-                <div class="summary-value">$450</div>
-                <p class="summary-change positive">3 invoices</p>
+                <div class="summary-value">$<?php echo number_format($paidThisMonth, 0); ?></div>
+                <p class="summary-change positive"><?php echo count(array_filter($invoices, fn($i) => $i['status']==='paid' && $i['paid_at'] && date('Y-m', strtotime($i['paid_at']))===date('Y-m'))); ?> invoices</p>
             </div>
             <div class="summary-card">
                 <h4>All Time</h4>
-                <div class="summary-value">$2,340</div>
+                <div class="summary-value">$<?php echo number_format($allTimePaid, 0); ?></div>
                 <p class="summary-change">Total paid</p>
-            </div>
-        </section>
-
-        <section class="grid-2">
-            <div class="panel">
-                <div class="panel-header">
-                    <h3>Pending Payments</h3>
-                </div>
-                <ul class="list-table">
-                    <li>
-                        <span>
-                            <strong>#INV-2025-002</strong><br>
-                            <span style="font-size: 0.85rem; color: var(--mc-gray);">Lab Tests · Nov 10, 2025</span>
-                        </span>
-                        <span>
-                            <strong>$320</strong><br>
-                            <button class="btn-primary small" style="margin-top: 8px;">Pay Now</button>
-                        </span>
-                    </li>
-                    <li>
-                        <span>
-                            <strong>#INV-2025-004</strong><br>
-                            <span style="font-size: 0.85rem; color: var(--mc-gray);">Consultation · Oct 25, 2025</span>
-                        </span>
-                        <span>
-                            <strong>$150</strong><br>
-                            <button class="btn-primary small" style="margin-top: 8px;">Pay Now</button>
-                        </span>
-                    </li>
-                </ul>
-            </div>
-
-            <div class="panel">
-                <div class="panel-header">
-                    <h3>Recent Payments</h3>
-                </div>
-                <ul class="list-table">
-                    <li>
-                        <span>
-                            <strong>#INV-2025-001</strong><br>
-                            <span style="font-size: 0.85rem; color: var(--mc-gray);">Cardiology Consultation · Nov 12, 2025</span>
-                        </span>
-                        <span>
-                            <strong>$450</strong><br>
-                            <span class="badge cyan" style="margin-top: 8px;">Paid</span>
-                        </span>
-                    </li>
-                    <li>
-                        <span>
-                            <strong>#INV-2024-098</strong><br>
-                            <span style="font-size: 0.85rem; color: var(--mc-gray);">General Check-up · Nov 8, 2025</span>
-                        </span>
-                        <span>
-                            <strong>$280</strong><br>
-                            <span class="badge cyan" style="margin-top: 8px;">Paid</span>
-                        </span>
-                    </li>
-                </ul>
             </div>
         </section>
 
         <section class="panel">
             <div class="panel-header">
                 <h3>All Invoices</h3>
-                <select>
-                    <option>All Status</option>
-                    <option>Paid</option>
-                    <option>Pending</option>
-                    <option>Overdue</option>
-                </select>
             </div>
             <table class="data-table">
                 <thead>
@@ -117,50 +81,31 @@ $sidebar = render_patient_sidebar();
                     </tr>
                 </thead>
                 <tbody>
+                    <?php foreach ($invoices as $inv): ?>
                     <tr>
-                        <td>#INV-2025-002</td>
-                        <td>Nov 10, 2025</td>
-                        <td>Lab Tests</td>
-                        <td>$320</td>
-                        <td><span class="badge">Pending</span></td>
+                        <td><?php echo htmlspecialchars($inv['invoice_number']); ?></td>
+                        <td><?php echo htmlspecialchars($inv['created_at']); ?></td>
+                        <td><?php echo htmlspecialchars($inv['service']); ?></td>
+                        <td>$<?php echo number_format((float)$inv['amount'], 2); ?></td>
                         <td>
-                            <button class="btn-primary small">Pay Now</button>
-                            <button class="btn-outline small">View</button>
+                            <?php if ($inv['status'] === 'paid'): ?>
+                                <span class="badge cyan">Paid</span>
+                            <?php else: ?>
+                                <span class="badge"><?php echo htmlspecialchars($inv['status']); ?></span>
+                            <?php endif; ?>
+                        </td>
+                        <td>
+                            <?php if ($inv['status'] !== 'paid'): ?>
+                                <a href="index.php?page=patient-billing&pay=<?php echo (int)$inv['id']; ?>" class="btn-primary small">Pay Now</a>
+                            <?php endif; ?>
+                            <a href="index.php?page=patient-view&type=invoice&id=<?php echo (int)$inv['id']; ?>" class="btn-outline small">View</a>
+                            <a href="index.php?page=patient-download&type=invoice&id=<?php echo (int)$inv['id']; ?>" class="btn-outline small">Download</a>
                         </td>
                     </tr>
-                    <tr>
-                        <td>#INV-2025-001</td>
-                        <td>Nov 12, 2025</td>
-                        <td>Cardiology Consultation</td>
-                        <td>$450</td>
-                        <td><span class="badge cyan">Paid</span></td>
-                        <td>
-                            <button class="btn-outline small">View</button>
-                            <button class="btn-outline small">Download</button>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>#INV-2024-098</td>
-                        <td>Nov 8, 2025</td>
-                        <td>General Check-up</td>
-                        <td>$280</td>
-                        <td><span class="badge cyan">Paid</span></td>
-                        <td>
-                            <button class="btn-outline small">View</button>
-                            <button class="btn-outline small">Download</button>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>#INV-2025-004</td>
-                        <td>Oct 25, 2025</td>
-                        <td>Consultation</td>
-                        <td>$150</td>
-                        <td><span class="badge" style="background: #ef4444; color: white;">Overdue</span></td>
-                        <td>
-                            <button class="btn-primary small">Pay Now</button>
-                            <button class="btn-outline small">View</button>
-                        </td>
-                    </tr>
+                    <?php endforeach; ?>
+                    <?php if (empty($invoices)): ?>
+                    <tr><td colspan="6">No invoices yet.</td></tr>
+                    <?php endif; ?>
                 </tbody>
             </table>
         </section>

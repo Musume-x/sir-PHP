@@ -1,7 +1,15 @@
-<?php 
+<?php
 require __DIR__ . '/../layouts/admin_sidebar.php';
+require_once __DIR__ . '/../../../config/database.php';
+$pdo = $GLOBALS['pdo'] ?? null;
 $user = current_user();
 $sidebar = render_admin_sidebar();
+
+$users = [];
+if ($pdo) {
+    $stmt = $pdo->query("SELECT id, name, email, role, created_at FROM users ORDER BY role, id");
+    $users = $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
+}
 ?>
 <div class="app-shell">
     <?php echo $sidebar; ?>
@@ -44,50 +52,22 @@ $sidebar = render_admin_sidebar();
                     </tr>
                 </thead>
                 <tbody>
+                    <?php foreach ($users as $u): ?>
                     <tr>
-                        <td>John Doe</td>
-                        <td>john.doe@medicare.com</td>
-                        <td><span class="badge">Admin</span></td>
+                        <td><?php echo htmlspecialchars($u['name']); ?></td>
+                        <td><?php echo htmlspecialchars($u['email']); ?></td>
+                        <td><span class="badge"><?php echo htmlspecialchars(ucfirst($u['role'])); ?></span></td>
                         <td><span class="badge cyan">Active</span></td>
-                        <td>Today, 10:30 AM</td>
+                        <td>—</td>
                         <td>
                             <button class="btn-outline small">Edit</button>
                             <button class="btn-outline small">Deactivate</button>
                         </td>
                     </tr>
-                    <tr>
-                        <td>Dr. Jane Cooper</td>
-                        <td>jane.cooper@medicare.com</td>
-                        <td><span class="badge">Doctor</span></td>
-                        <td><span class="badge cyan">Active</span></td>
-                        <td>Today, 09:15 AM</td>
-                        <td>
-                            <button class="btn-outline small">Edit</button>
-                            <button class="btn-outline small">Deactivate</button>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>Sarah Wilson</td>
-                        <td>sarah.wilson@medicare.com</td>
-                        <td><span class="badge">Nurse</span></td>
-                        <td><span class="badge cyan">Active</span></td>
-                        <td>Yesterday, 4:20 PM</td>
-                        <td>
-                            <button class="btn-outline small">Edit</button>
-                            <button class="btn-outline small">Deactivate</button>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>Michael Brown</td>
-                        <td>michael.brown@medicare.com</td>
-                        <td><span class="badge">Patient</span></td>
-                        <td><span class="badge cyan">Active</span></td>
-                        <td>Nov 10, 2:45 PM</td>
-                        <td>
-                            <button class="btn-outline small">Edit</button>
-                            <button class="btn-outline small">Deactivate</button>
-                        </td>
-                    </tr>
+                    <?php endforeach; ?>
+                    <?php if (empty($users)): ?>
+                    <tr><td colspan="6">No users in database.</td></tr>
+                    <?php endif; ?>
                 </tbody>
             </table>
         </section>

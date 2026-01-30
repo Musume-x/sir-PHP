@@ -20,23 +20,23 @@ $sidebar = render_admin_sidebar();
         <section class="grid-4">
             <div class="summary-card">
                 <h4>Patient Reports</h4>
-                <div class="summary-value">24</div>
-                <p class="summary-change">Generated</p>
+                <div class="summary-value">0</div>
+                <p class="summary-change">—</p>
             </div>
             <div class="summary-card">
                 <h4>Appointment Analytics</h4>
-                <div class="summary-value">18</div>
-                <p class="summary-change">This month</p>
+                <div class="summary-value">0</div>
+                <p class="summary-change">—</p>
             </div>
             <div class="summary-card">
                 <h4>Financial Reports</h4>
-                <div class="summary-value">12</div>
-                <p class="summary-change">Available</p>
+                <div class="summary-value">0</div>
+                <p class="summary-change">—</p>
             </div>
             <div class="summary-card">
                 <h4>System Logs</h4>
-                <div class="summary-value">1,542</div>
-                <p class="summary-change">Activities</p>
+                <div class="summary-value">0</div>
+                <p class="summary-change">—</p>
             </div>
         </section>
 
@@ -53,28 +53,9 @@ $sidebar = render_admin_sidebar();
                 </div>
                 <ul class="list-table">
                     <li>
-                        <span><strong>New Patients Report</strong><br>Nov 2025</span>
-                        <span>58 patients</span>
-                        <span>
-                            <button class="btn-outline small">View</button>
-                            <button class="btn-outline small">Download</button>
-                        </span>
-                    </li>
-                    <li>
-                        <span><strong>Patient Demographics</strong><br>Q4 2025</span>
-                        <span>1,254 total</span>
-                        <span>
-                            <button class="btn-outline small">View</button>
-                            <button class="btn-outline small">Download</button>
-                        </span>
-                    </li>
-                    <li>
-                        <span><strong>Active Patients</strong><br>This Month</span>
-                        <span>892 active</span>
-                        <span>
-                            <button class="btn-outline small">View</button>
-                            <button class="btn-outline small">Download</button>
-                        </span>
+                        <span>No reports. Example data removed.</span>
+                        <span>—</span>
+                        <span>—</span>
                     </li>
                 </ul>
             </div>

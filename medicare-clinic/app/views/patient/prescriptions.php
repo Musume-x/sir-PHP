@@ -1,7 +1,28 @@
-<?php 
+<?php
 require __DIR__ . '/../layouts/patient_sidebar.php';
+require_once __DIR__ . '/../../../config/database.php';
+$pdo = $GLOBALS['pdo'] ?? null;
 $user = current_user();
 $sidebar = render_patient_sidebar();
+$prescriptions = [];
+$activeCount = 0;
+$refillNeeded = 0;
+if ($pdo && $user) {
+    $pid = (int) $user['id'];
+    $stmt = $pdo->prepare("
+        SELECT p.*, u.name as doctor_name
+        FROM prescriptions p
+        JOIN users u ON p.doctor_id = u.id
+        WHERE p.patient_id = ?
+        ORDER BY p.created_at DESC
+    ");
+    $stmt->execute([$pid]);
+    $prescriptions = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $activeCount = count(array_filter($prescriptions, fn($r) => $r['status'] === 'active'));
+    $refillNeeded = count(array_filter($prescriptions, fn($r) => (int)($r['refill_requested'] ?? 0) === 1));
+}
+$requested = !empty($_GET['requested']);
+$refilled = !empty($_GET['refilled']);
 ?>
 <div class="app-shell">
     <?php echo $sidebar; ?>
@@ -19,89 +40,34 @@ $sidebar = render_patient_sidebar();
             </div>
         </header>
 
+        <?php if ($requested): ?>
+            <p class="auth-success">Refill requested.</p>
+        <?php endif; ?>
+        <?php if ($refilled): ?>
+            <p class="auth-success">Refill recorded.</p>
+        <?php endif; ?>
+
         <section class="grid-3">
             <div class="summary-card">
                 <h4>Active Prescriptions</h4>
-                <div class="summary-value">2</div>
+                <div class="summary-value"><?php echo $activeCount; ?></div>
                 <p class="summary-change">Currently taking</p>
             </div>
             <div class="summary-card">
                 <h4>Total Prescriptions</h4>
-                <div class="summary-value">5</div>
+                <div class="summary-value"><?php echo count($prescriptions); ?></div>
                 <p class="summary-change">All time</p>
             </div>
             <div class="summary-card">
-                <h4>Refills Needed</h4>
-                <div class="summary-value">1</div>
-                <p class="summary-change">This month</p>
-            </div>
-        </section>
-
-        <section class="grid-2">
-            <div class="panel">
-                <div class="panel-header">
-                    <h3>Active Prescriptions</h3>
-                </div>
-                <ul class="list-table">
-                    <li>
-                        <span>
-                            <strong>Lisinopril 10mg</strong><br>
-                            <span style="font-size: 0.85rem; color: var(--mc-gray);">Dr. Jane Cooper · Nov 12, 2025</span><br>
-                            <span style="font-size: 0.85rem;">Take 1 tablet daily · 30 days supply</span>
-                        </span>
-                        <span>
-                            <span class="badge cyan">Active</span><br>
-                            <button class="btn-outline small" style="margin-top: 8px;">Request Refill</button>
-                        </span>
-                    </li>
-                    <li>
-                        <span>
-                            <strong>Metformin 500mg</strong><br>
-                            <span style="font-size: 0.85rem; color: var(--mc-gray);">Dr. Sarah Wilson · Nov 8, 2025</span><br>
-                            <span style="font-size: 0.85rem;">Take 1 tablet twice daily · 60 days supply</span>
-                        </span>
-                        <span>
-                            <span class="badge cyan">Active</span><br>
-                            <button class="btn-outline small" style="margin-top: 8px;">Request Refill</button>
-                        </span>
-                    </li>
-                </ul>
-            </div>
-
-            <div class="panel">
-                <div class="panel-header">
-                    <h3>Recent Prescriptions</h3>
-                </div>
-                <ul class="list-table">
-                    <li>
-                        <span>
-                            <strong>Amoxicillin 500mg</strong><br>
-                            <span style="font-size: 0.85rem; color: var(--mc-gray);">Dr. Robert Smith · Oct 28, 2025</span><br>
-                            <span style="font-size: 0.85rem;">Take 1 capsule three times daily · 7 days</span>
-                        </span>
-                        <span class="badge">Completed</span>
-                    </li>
-                    <li>
-                        <span>
-                            <strong>Ibuprofen 400mg</strong><br>
-                            <span style="font-size: 0.85rem; color: var(--mc-gray);">Dr. Jane Cooper · Oct 10, 2025</span><br>
-                            <span style="font-size: 0.85rem;">Take as needed for pain</span>
-                        </span>
-                        <span class="badge">Completed</span>
-                    </li>
-                </ul>
+                <h4>Refills Requested</h4>
+                <div class="summary-value"><?php echo $refillNeeded; ?></div>
+                <p class="summary-change">Pending approval</p>
             </div>
         </section>
 
         <section class="panel">
             <div class="panel-header">
                 <h3>All Prescriptions</h3>
-                <select>
-                    <option>All Status</option>
-                    <option>Active</option>
-                    <option>Completed</option>
-                    <option>Expired</option>
-                </select>
             </div>
             <table class="data-table">
                 <thead>
@@ -116,42 +82,36 @@ $sidebar = render_patient_sidebar();
                     </tr>
                 </thead>
                 <tbody>
+                    <?php foreach ($prescriptions as $p): ?>
                     <tr>
-                        <td>Nov 12, 2025</td>
-                        <td>Lisinopril 10mg</td>
-                        <td>Dr. Jane Cooper</td>
-                        <td>1 tablet daily</td>
-                        <td>30 days</td>
-                        <td><span class="badge cyan">Active</span></td>
+                        <td><?php echo htmlspecialchars($p['created_at']); ?></td>
+                        <td><?php echo htmlspecialchars($p['medication']); ?></td>
+                        <td><?php echo htmlspecialchars($p['doctor_name'] ?? '—'); ?></td>
+                        <td><?php echo htmlspecialchars($p['dosage']); ?></td>
+                        <td><?php echo (int)($p['duration_days'] ?? 0); ?> days</td>
                         <td>
-                            <button class="btn-outline small">View</button>
-                            <button class="btn-outline small">Refill</button>
+                            <span class="badge <?php echo $p['status'] === 'active' ? 'cyan' : ''; ?>"><?php echo htmlspecialchars($p['status']); ?></span>
+                            <?php if (!empty($p['refill_requested'])): ?>
+                                <br><span style="font-size:0.8rem;">Refill requested</span>
+                            <?php endif; ?>
+                        </td>
+                        <td>
+                            <a href="index.php?page=patient-view&type=prescription&id=<?php echo (int)$p['id']; ?>" class="btn-outline small">View</a>
+                            <?php if ($p['status'] === 'active'): ?>
+                                <?php if (empty($p['refill_requested'])): ?>
+                                    <a href="index.php?page=patient-prescriptions&request_refill=<?php echo (int)$p['id']; ?>" class="btn-outline small">Request Refill</a>
+                                <?php elseif (!empty($p['refill_approved'])): ?>
+                                    <a href="index.php?page=patient-prescriptions&refill=<?php echo (int)$p['id']; ?>" class="btn-outline small">Refill</a>
+                                <?php endif; ?>
+                            <?php else: ?>
+                                <a href="index.php?page=patient-download&type=prescription&id=<?php echo (int)$p['id']; ?>" class="btn-outline small">Download</a>
+                            <?php endif; ?>
                         </td>
                     </tr>
-                    <tr>
-                        <td>Nov 8, 2025</td>
-                        <td>Metformin 500mg</td>
-                        <td>Dr. Sarah Wilson</td>
-                        <td>1 tablet twice daily</td>
-                        <td>60 days</td>
-                        <td><span class="badge cyan">Active</span></td>
-                        <td>
-                            <button class="btn-outline small">View</button>
-                            <button class="btn-outline small">Refill</button>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>Oct 28, 2025</td>
-                        <td>Amoxicillin 500mg</td>
-                        <td>Dr. Robert Smith</td>
-                        <td>1 capsule three times daily</td>
-                        <td>7 days</td>
-                        <td><span class="badge">Completed</span></td>
-                        <td>
-                            <button class="btn-outline small">View</button>
-                            <button class="btn-outline small">Download</button>
-                        </td>
-                    </tr>
+                    <?php endforeach; ?>
+                    <?php if (empty($prescriptions)): ?>
+                    <tr><td colspan="7">No prescriptions yet.</td></tr>
+                    <?php endif; ?>
                 </tbody>
             </table>
         </section>
