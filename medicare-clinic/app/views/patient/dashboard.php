@@ -5,6 +5,7 @@ $pdo = $GLOBALS['pdo'] ?? null;
 $user = current_user();
 $sidebar = render_patient_sidebar();
 $upcomingAppointment = null;
+$pendingRequest = null;
 $prescriptionCount = 0;
 $activePrescriptionCount = 0;
 $totalDue = 0;
@@ -16,6 +17,18 @@ if ($pdo && $user) {
     $stmt = $pdo->prepare("SELECT a.*, u.name as doctor_name FROM appointments a JOIN users u ON a.doctor_id = u.id WHERE a.patient_id = ? AND a.appointment_date >= ? AND a.status NOT IN ('cancelled','completed') ORDER BY a.appointment_date, a.appointment_time LIMIT 1");
     $stmt->execute([$pid, $today]);
     $upcomingAppointment = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    $stmt = $pdo->prepare("
+        SELECT r.*, u.name as doctor_name
+        FROM appointment_requests r
+        JOIN users u ON r.doctor_id = u.id
+        WHERE r.patient_id = ? AND r.status = 'pending'
+        ORDER BY r.created_at DESC
+        LIMIT 1
+    ");
+    $stmt->execute([$pid]);
+    $pendingRequest = $stmt->fetch(PDO::FETCH_ASSOC);
+
     $stmt = $pdo->prepare("SELECT COUNT(*) FROM prescriptions WHERE patient_id = ?");
     $stmt->execute([$pid]);
     $prescriptionCount = (int) $stmt->fetchColumn();
@@ -52,6 +65,9 @@ if ($pdo && $user) {
                 <?php if ($upcomingAppointment): ?>
                     <div class="summary-value"><?php echo htmlspecialchars($upcomingAppointment['appointment_date']); ?></div>
                     <p class="summary-change"><?php echo htmlspecialchars($upcomingAppointment['appointment_time']); ?> · <?php echo htmlspecialchars($upcomingAppointment['doctor_name'] ?? '—'); ?></p>
+                <?php elseif ($pendingRequest): ?>
+                    <div class="summary-value">Pending</div>
+                    <p class="summary-change">Waiting for <?php echo htmlspecialchars($pendingRequest['doctor_name'] ?? 'Doctor'); ?> to schedule.</p>
                 <?php else: ?>
                     <div class="summary-value">—</div>
                     <p class="summary-change"><a href="index.php?page=patient-book">Book one</a></p>

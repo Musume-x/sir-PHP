@@ -72,6 +72,23 @@ try {
     ");
 
     $pdo->exec("
+        CREATE TABLE IF NOT EXISTS appointment_requests (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            patient_id INTEGER NOT NULL,
+            doctor_id INTEGER NOT NULL,
+            reason TEXT,
+            department TEXT,
+            status TEXT DEFAULT 'pending',
+            scheduled_appointment_id INTEGER,
+            scheduled_at TEXT,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (patient_id) REFERENCES users(id),
+            FOREIGN KEY (doctor_id) REFERENCES users(id),
+            FOREIGN KEY (scheduled_appointment_id) REFERENCES appointments(id)
+        )
+    ");
+
+    $pdo->exec("
         CREATE TABLE IF NOT EXISTS prescriptions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             patient_id INTEGER NOT NULL,

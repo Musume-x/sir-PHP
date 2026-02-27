@@ -18,6 +18,25 @@ $content = ob_get_clean();
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>MediCare Clinic System</title>
     <link rel="stylesheet" href="public/assets/css/style.css" />
+    <script>
+        // Basic back/forward navigation guard
+        (function () {
+            if (!window.history || !window.history.pushState) {
+                return;
+            }
+            // Push a new state so that the first back press stays on the app
+            window.addEventListener('load', function () {
+                history.pushState({ page: 'stay' }, '', window.location.href);
+            });
+
+            window.addEventListener('popstate', function (event) {
+                // Whenever user tries to go back/forward, push them back to current page
+                if (!event.state || event.state.page === 'stay') {
+                    history.pushState({ page: 'stay' }, '', window.location.href);
+                }
+            });
+        })();
+    </script>
 </head>
 <body>
 <?php echo $content; ?>

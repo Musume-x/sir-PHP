@@ -25,7 +25,7 @@ $receptionistCount = $counts['receptionist'] ?? 0;
                 <div class="search-bar">
                     <input type="text" placeholder="Search staff..." />
                 </div>
-                <button class="btn-primary">+ Add Staff</button>
+                <a class="btn-primary" href="index.php?page=admin-register">+ Add Staff</a>
                 <div class="user-info">
                     <span class="role">Admin</span>
                     <span class="name"><?php echo htmlspecialchars($user['name'] ?? 'Admin'); ?></span>
@@ -74,7 +74,7 @@ $receptionistCount = $counts['receptionist'] ?? 0;
                 </thead>
                 <tbody>
                     <?php foreach ($staff as $s): ?>
-                    <tr>
+                    <tr class="<?php echo $s['role'] === 'doctor' ? 'doctor-row' : ($s['role'] === 'nurse' ? 'nurse-row' : 'receptionist-row'); ?>">
                         <td><?php echo htmlspecialchars($s['name']); ?></td>
                         <td><span class="badge"><?php echo htmlspecialchars(ucfirst($s['role'])); ?></span></td>
                         <td><?php echo $s['role'] === 'doctor' ? 'General' : ($s['role'] === 'nurse' ? 'General' : 'Front Desk'); ?></td>

@@ -104,6 +104,19 @@ a {
     z-index: 1;
 }
 
+.landing-hero .hero-text {
+    background: rgba(255, 255, 255, 0.9);
+    padding: 24px 28px;
+    border-radius: 24px;
+    box-shadow: var(--shadow-soft);
+    max-width: 560px;
+}
+
+.landing-hero .hero-text h1,
+.landing-hero .hero-text p {
+    color: var(--mc-black);
+}
+
 .hero-text h1 {
     font-size: 2.8rem;
     line-height: 1.1;

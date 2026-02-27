@@ -13,6 +13,9 @@
             <?php if (!empty($_GET['error'])): ?>
                 <p class="auth-error">Invalid email or password.</p>
             <?php endif; ?>
+            <?php if (!empty($_GET['timeout'])): ?>
+                <p class="auth-error">Your session has expired due to inactivity. Please log in again.</p>
+            <?php endif; ?>
             <?php if (!empty($_GET['success'])): ?>
                 <p class="auth-success">Registration successful. You can now log in.</p>
             <?php endif; ?>

@@ -20,7 +20,7 @@ if ($pdo) {
                 <div class="search-bar">
                     <input type="text" placeholder="Search users..." />
                 </div>
-                <button class="btn-primary">+ Add User</button>
+                <a class="btn-primary" href="index.php?page=admin-register">+ Add User</a>
                 <div class="user-info">
                     <span class="role">Admin</span>
                     <span class="name"><?php echo htmlspecialchars($user['name'] ?? 'Admin'); ?></span>

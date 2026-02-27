@@ -6,7 +6,7 @@
 
 function handle_patient_book(): ?string
 {
-    if ($_SERVER['REQUEST_METHOD'] !== 'POST' || empty($_POST['book_appointment'])) {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST' || empty($_POST['request_appointment'])) {
         return null;
     }
     $user = current_user();
@@ -19,19 +19,16 @@ function handle_patient_book(): ?string
     }
     $patient_id = (int) $user['id'];
     $doctor_id = (int) ($_POST['doctor_id'] ?? 0);
-    $date = trim($_POST['appointment_date'] ?? '');
-    $time = trim($_POST['appointment_time'] ?? '');
     $reason = trim($_POST['reason'] ?? '');
     $department = trim($_POST['department'] ?? 'General');
-    if (!$doctor_id || !$date || !$time) {
+    if (!$doctor_id) {
         return 'index.php?page=patient-book&error=1';
     }
-    $stmt = $pdo->prepare("INSERT INTO appointments (patient_id, doctor_id, appointment_date, appointment_time, reason, department, status) VALUES (?,?,?,?,?,?,'pending')");
-    $stmt->execute([$patient_id, $doctor_id, $date, $time, $reason, $department]);
-    $appointment_id = $pdo->lastInsertId();
+    $stmt = $pdo->prepare("INSERT INTO appointment_requests (patient_id, doctor_id, reason, department, status) VALUES (?,?,?,?, 'pending')");
+    $stmt->execute([$patient_id, $doctor_id, $reason, $department]);
     $stmt = $pdo->prepare("INSERT INTO notifications (user_id, title, message, type) VALUES (?,?,?,?)");
-    $stmt->execute([$patient_id, 'Appointment Booked', "Your appointment on $date at $time has been booked and is pending confirmation.", 'appointment']);
-    return 'index.php?page=patient-appointments&success=1';
+    $stmt->execute([$patient_id, 'Appointment Requested', "Your appointment request has been sent. The doctor will schedule the date and time.", 'appointment']);
+    return 'index.php?page=patient-appointments&requested=1';
 }
 
 function handle_patient_billing_pay(): ?string
@@ -182,6 +179,52 @@ function handle_staff_profile_save(): ?string
     $pdo->prepare("UPDATE users SET name = ? WHERE id = ?")->execute([$name, $user['id']]);
     $pdo->prepare("INSERT INTO user_profiles (user_id, phone, updated_at) VALUES (?, ?, datetime('now')) ON CONFLICT(user_id) DO UPDATE SET phone = excluded.phone, updated_at = datetime('now')")->execute([$user['id'], $phone]);
     return 'index.php?page=staff-profile&saved=1';
+}
+
+function handle_doctor_schedule_request(): ?string
+{
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST' || empty($_POST['schedule_request'])) {
+        return null;
+    }
+    $user = current_user();
+    if (!$user || $user['role'] !== 'doctor') {
+        return null;
+    }
+    require_once __DIR__ . '/database.php';
+    if (!$pdo) {
+        return 'index.php?page=staff-requests&error=1';
+    }
+
+    $requestId = (int) ($_POST['request_id'] ?? 0);
+    $date = trim($_POST['appointment_date'] ?? '');
+    $time = trim($_POST['appointment_time'] ?? '');
+    if (!$requestId || !$date || !$time) {
+        return 'index.php?page=staff-requests&error=1';
+    }
+
+    $stmt = $pdo->prepare("SELECT * FROM appointment_requests WHERE id = ? AND doctor_id = ? AND status = 'pending' LIMIT 1");
+    $stmt->execute([$requestId, (int) $user['id']]);
+    $req = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (!$req) {
+        return 'index.php?page=staff-requests&error=1';
+    }
+
+    $patientId = (int) ($req['patient_id'] ?? 0);
+    $doctorId = (int) ($req['doctor_id'] ?? 0);
+    $reason = (string) ($req['reason'] ?? '');
+    $department = (string) ($req['department'] ?? 'General');
+
+    $stmt = $pdo->prepare("INSERT INTO appointments (patient_id, doctor_id, appointment_date, appointment_time, reason, department, status) VALUES (?,?,?,?,?,?,'confirmed')");
+    $stmt->execute([$patientId, $doctorId, $date, $time, $reason, $department]);
+    $appointmentId = (int) $pdo->lastInsertId();
+
+    $pdo->prepare("UPDATE appointment_requests SET status = 'scheduled', scheduled_appointment_id = ?, scheduled_at = datetime('now') WHERE id = ?")
+        ->execute([$appointmentId, $requestId]);
+
+    $pdo->prepare("INSERT INTO notifications (user_id, title, message, type) VALUES (?,?,?,?)")
+        ->execute([$patientId, 'Appointment Scheduled', "Your appointment has been scheduled on $date at $time.", 'appointment']);
+
+    return 'index.php?page=staff-requests&scheduled=1';
 }
 
 function handle_admin_action(): ?string

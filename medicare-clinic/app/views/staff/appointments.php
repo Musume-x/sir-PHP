@@ -4,18 +4,32 @@ require_once __DIR__ . '/../../../config/database.php';
 $pdo = $GLOBALS['pdo'] ?? null;
 $user = current_user();
 $role = ucfirst(current_role() ?? 'Staff');
+$rawRole = current_role() ?? null;
 $sidebar = render_staff_sidebar();
 $appointments = [];
 $today = date('Y-m-d');
 if ($pdo) {
-    $stmt = $pdo->query("
-        SELECT a.*, u1.name as patient_name, u2.name as doctor_name
-        FROM appointments a
-        JOIN users u1 ON a.patient_id = u1.id
-        JOIN users u2 ON a.doctor_id = u2.id
-        ORDER BY a.appointment_date, a.appointment_time
-    ");
-    $appointments = $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
+    if ($rawRole === 'doctor' && !empty($user['id'])) {
+        $stmt = $pdo->prepare("
+            SELECT a.*, u1.name as patient_name, u2.name as doctor_name
+            FROM appointments a
+            JOIN users u1 ON a.patient_id = u1.id
+            JOIN users u2 ON a.doctor_id = u2.id
+            WHERE a.doctor_id = ?
+            ORDER BY a.appointment_date, a.appointment_time
+        ");
+        $stmt->execute([(int) $user['id']]);
+        $appointments = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } else {
+        $stmt = $pdo->query("
+            SELECT a.*, u1.name as patient_name, u2.name as doctor_name
+            FROM appointments a
+            JOIN users u1 ON a.patient_id = u1.id
+            JOIN users u2 ON a.doctor_id = u2.id
+            ORDER BY a.appointment_date, a.appointment_time
+        ");
+        $appointments = $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
+    }
 }
 $todayAppointments = array_filter($appointments, fn($a) => $a['appointment_date'] === $today);
 $upcoming = array_filter($appointments, fn($a) => $a['appointment_date'] >= $today && !in_array($a['status'], ['cancelled', 'completed'], true));

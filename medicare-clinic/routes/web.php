@@ -36,12 +36,7 @@ function route_request(string $page): void
                     require __DIR__ . '/../app/views/auth/register.php';
                     return;
                 }
-                $role = $_POST['role'] ?? 'patient';
-                $allowedRoles = ['patient', 'doctor', 'nurse', 'receptionist'];
-                if (!in_array($role, $allowedRoles, true)) {
-                    $role = 'patient';
-                }
-                $result = register_user($name, $email, $password, $role);
+                $result = register_user($name, $email, $password, 'patient');
                 if ($result === true) {
                     header('Location: index.php?page=login&success=1');
                     exit;
@@ -57,6 +52,42 @@ function route_request(string $page): void
         case 'logout':
             logout_user();
             header('Location: index.php?page=home');
+            break;
+
+        case 'admin-register':
+            require_role(['admin']);
+            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                $name = $_POST['name'] ?? '';
+                $email = $_POST['email'] ?? '';
+                $role = $_POST['role'] ?? '';
+                $department = $_POST['department'] ?? null;
+                $password = $_POST['password'] ?? '';
+                $password_confirm = $_POST['password_confirm'] ?? '';
+                if ($password !== $password_confirm) {
+                    $register_error = 'Passwords do not match.';
+                    $register_success = '';
+                    require __DIR__ . '/../app/views/admin/register_user.php';
+                    return;
+                }
+                $allowedRoles = ['admin', 'doctor', 'nurse', 'receptionist'];
+                if (!in_array($role, $allowedRoles, true)) {
+                    $role = 'doctor';
+                }
+                $result = register_user($name, $email, $password, $role, $department);
+                if ($result === true) {
+                    $register_error = '';
+                    $register_success = 'Account created successfully.';
+                    require __DIR__ . '/../app/views/admin/register_user.php';
+                    return;
+                }
+                $register_error = $result;
+                $register_success = '';
+                require __DIR__ . '/../app/views/admin/register_user.php';
+                return;
+            }
+            $register_error = '';
+            $register_success = '';
+            require __DIR__ . '/../app/views/admin/register_user.php';
             break;
 
         case 'admin':
@@ -109,9 +140,29 @@ function route_request(string $page): void
             require __DIR__ . '/../app/views/staff/dashboard.php';
             break;
 
+        case 'nurse':
+            require_role(['nurse']);
+            require __DIR__ . '/../app/views/staff/dashboard.php';
+            break;
+
+        case 'receptionist':
+            require_role(['receptionist']);
+            require __DIR__ . '/../app/views/staff/dashboard.php';
+            break;
+
         case 'staff-appointments':
             require_role(['doctor', 'nurse', 'receptionist']);
             require __DIR__ . '/../app/views/staff/appointments.php';
+            break;
+
+        case 'staff-requests':
+            require_role(['doctor']);
+            $redirect = handle_doctor_schedule_request();
+            if ($redirect) {
+                header("Location: $redirect");
+                exit;
+            }
+            require __DIR__ . '/../app/views/staff/requests.php';
             break;
 
         case 'staff-patients':
@@ -254,7 +305,11 @@ function redirect_after_login(string $role): void
 {
     if ($role === 'admin') {
         header('Location: index.php?page=admin');
-    } elseif (in_array($role, ['doctor', 'nurse', 'receptionist'], true)) {
+    } elseif ($role === 'nurse') {
+        header('Location: index.php?page=nurse');
+    } elseif ($role === 'receptionist') {
+        header('Location: index.php?page=receptionist');
+    } elseif (in_array($role, ['doctor'], true)) {
         header('Location: index.php?page=staff');
     } else {
         header('Location: index.php?page=patient');

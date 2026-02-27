@@ -4,6 +4,31 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+// Basic session management: inactivity timeout and ID regeneration
+$now = time();
+// Inactivity timeout: 30 minutes
+$sessionTimeout = 1800;
+// Regenerate session ID every 10 minutes to reduce fixation risk
+$regenerateInterval = 600;
+
+// Inactivity handling
+if (isset($_SESSION['last_activity']) && ($now - $_SESSION['last_activity']) > $sessionTimeout) {
+    // Session expired due to inactivity
+    $_SESSION = [];
+    session_destroy();
+    header('Location: index.php?page=login&timeout=1');
+    exit;
+}
+$_SESSION['last_activity'] = $now;
+
+// Session ID regeneration
+if (!isset($_SESSION['created'])) {
+    $_SESSION['created'] = $now;
+} elseif (($now - $_SESSION['created']) > $regenerateInterval) {
+    session_regenerate_id(true);
+    $_SESSION['created'] = $now;
+}
+
 /**
  * Validate login against SQLite users table. Returns user row on success, null on failure.
  */
@@ -20,6 +45,7 @@ function login_user(string $email, string $password)
     if (!$user || !password_verify($password, $user['password_hash'])) {
         return null;
     }
+    session_regenerate_id(true);
     unset($user['password_hash']);
     $_SESSION['user'] = $user;
     return $user;
@@ -28,7 +54,7 @@ function login_user(string $email, string $password)
 /**
  * Register a new user (patient by default). Returns true on success, error message on failure.
  */
-function register_user(string $name, string $email, string $password, string $role = 'patient')
+function register_user(string $name, string $email, string $password, string $role = 'patient', ?string $department = null)
 {
     require_once __DIR__ . '/database.php';
     $pdo = $GLOBALS['pdo'] ?? null;
@@ -44,10 +70,14 @@ function register_user(string $name, string $email, string $password, string $ro
     if (!in_array($role, $allowedRoles, true)) {
         $role = 'patient';
     }
+    $department = $department !== null ? trim($department) : null;
+    if ($department === '') {
+        $department = null;
+    }
     $passwordHash = password_hash($password, PASSWORD_DEFAULT);
     try {
-        $stmt = $pdo->prepare("INSERT INTO users (email, password_hash, name, role) VALUES (?, ?, ?, ?)");
-        $stmt->execute([$email, $passwordHash, $name, $role]);
+        $stmt = $pdo->prepare("INSERT INTO users (email, password_hash, name, role, department) VALUES (?, ?, ?, ?, ?)");
+        $stmt->execute([$email, $passwordHash, $name, $role, $department]);
         return true;
     } catch (PDOException $e) {
         if (strpos($e->getMessage(), 'UNIQUE') !== false) {

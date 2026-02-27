@@ -8,7 +8,7 @@
         </div>
         <div class="auth-right">
             <h2>Create Account</h2>
-            <p class="subtitle">Choose your role and create an account.</p>
+            <p class="subtitle">Create your patient account.</p>
 
             <?php if (!empty($register_error)): ?>
                 <p class="auth-error"><?php echo htmlspecialchars($register_error); ?></p>
@@ -34,16 +34,6 @@
                         <input type="email" id="email" name="email" placeholder="Enter Email ID" required
                             value="<?php echo htmlspecialchars($_POST['email'] ?? ''); ?>" />
                     </div>
-                </div>
-
-                <div class="form-group">
-                    <label for="role">Register as</label>
-                    <select id="role" name="role" required>
-                        <option value="patient" <?php echo ($_POST['role'] ?? '') === 'patient' ? 'selected' : ''; ?>>Patient</option>
-                        <option value="doctor" <?php echo ($_POST['role'] ?? '') === 'doctor' ? 'selected' : ''; ?>>Doctor</option>
-                        <option value="nurse" <?php echo ($_POST['role'] ?? '') === 'nurse' ? 'selected' : ''; ?>>Nurse</option>
-                        <option value="receptionist" <?php echo ($_POST['role'] ?? '') === 'receptionist' ? 'selected' : ''; ?>>Receptionist</option>
-                    </select>
                 </div>
 
                 <div class="form-group">

@@ -5,10 +5,21 @@ $pdo = $GLOBALS['pdo'] ?? null;
 $user = current_user();
 $sidebar = render_patient_sidebar();
 $appointments = [];
+$requests = [];
 $upcomingCount = 0;
 $completedCount = 0;
 if ($pdo && $user) {
     $pid = (int) $user['id'];
+    $stmt = $pdo->prepare("
+        SELECT r.*, u.name as doctor_name
+        FROM appointment_requests r
+        JOIN users u ON r.doctor_id = u.id
+        WHERE r.patient_id = ? AND r.status = 'pending'
+        ORDER BY r.created_at DESC
+    ");
+    $stmt->execute([$pid]);
+    $requests = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
     $stmt = $pdo->prepare("
         SELECT a.*, u.name as doctor_name
         FROM appointments a
@@ -24,7 +35,7 @@ if ($pdo && $user) {
     }));
     $completedCount = count(array_filter($appointments, fn($a) => $a['status'] === 'completed'));
 }
-$success = !empty($_GET['success']);
+$requested = !empty($_GET['requested']);
 ?>
 <div class="app-shell">
     <?php echo $sidebar; ?>
@@ -42,8 +53,8 @@ $success = !empty($_GET['success']);
             </div>
         </header>
 
-        <?php if ($success): ?>
-            <p class="auth-success">Appointment booked successfully.</p>
+        <?php if ($requested): ?>
+            <p class="auth-success">Request sent. The doctor will schedule your date and time.</p>
         <?php endif; ?>
 
         <section class="grid-3">
@@ -58,10 +69,41 @@ $success = !empty($_GET['success']);
                 <p class="summary-change">All visits</p>
             </div>
             <div class="summary-card">
-                <h4>Completed</h4>
-                <div class="summary-value"><?php echo $completedCount; ?></div>
-                <p class="summary-change">All time</p>
+                <h4>Pending Requests</h4>
+                <div class="summary-value"><?php echo count($requests); ?></div>
+                <p class="summary-change">Waiting to be scheduled</p>
             </div>
+        </section>
+
+        <section class="panel">
+            <div class="panel-header">
+                <h3>Pending Requests</h3>
+            </div>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Doctor</th>
+                        <th>Department</th>
+                        <th>Reason</th>
+                        <th>Requested</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($requests as $r): ?>
+                    <tr>
+                        <td><?php echo htmlspecialchars($r['doctor_name'] ?? '—'); ?></td>
+                        <td><?php echo htmlspecialchars($r['department'] ?? '—'); ?></td>
+                        <td><?php echo htmlspecialchars($r['reason'] ?: '—'); ?></td>
+                        <td><?php echo htmlspecialchars($r['created_at'] ?? '—'); ?></td>
+                        <td><span class="badge"><?php echo htmlspecialchars($r['status']); ?></span></td>
+                    </tr>
+                    <?php endforeach; ?>
+                    <?php if (empty($requests)): ?>
+                    <tr><td colspan="5">No pending requests.</td></tr>
+                    <?php endif; ?>
+                </tbody>
+            </table>
         </section>
 
         <section class="panel">
