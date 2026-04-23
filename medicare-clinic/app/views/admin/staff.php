@@ -7,14 +7,14 @@ $sidebar = render_admin_sidebar();
 
 $staff = [];
 if ($pdo) {
-    $stmt = $pdo->prepare("SELECT id, name, email, role FROM users WHERE role IN ('doctor','nurse','receptionist') ORDER BY role");
+    $stmt = $pdo->prepare("SELECT id, name, email, role, department FROM users WHERE role IN ('doctor','receptionist') ORDER BY role");
     $stmt->execute();
     $staff = $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 $counts = array_count_values(array_column($staff, 'role'));
 $doctorCount = $counts['doctor'] ?? 0;
-$nurseCount = $counts['nurse'] ?? 0;
 $receptionistCount = $counts['receptionist'] ?? 0;
+$totalStaff = count($staff);
 ?>
 <div class="app-shell">
     <?php echo $sidebar; ?>
@@ -35,19 +35,19 @@ $receptionistCount = $counts['receptionist'] ?? 0;
 
         <section class="grid-3">
             <div class="summary-card">
-                <h4>Total Doctors</h4>
+                <h4>Doctors</h4>
                 <div class="summary-value"><?php echo $doctorCount; ?></div>
-                <p class="summary-change">Example user</p>
-            </div>
-            <div class="summary-card">
-                <h4>Total Nurses</h4>
-                <div class="summary-value"><?php echo $nurseCount; ?></div>
-                <p class="summary-change">Example user</p>
+                <p class="summary-change">Clinical staff</p>
             </div>
             <div class="summary-card">
                 <h4>Receptionists</h4>
                 <div class="summary-value"><?php echo $receptionistCount; ?></div>
-                <p class="summary-change">Example user</p>
+                <p class="summary-change">Front desk</p>
+            </div>
+            <div class="summary-card">
+                <h4>Total staff</h4>
+                <div class="summary-value"><?php echo $totalStaff; ?></div>
+                <p class="summary-change">Doctors + reception</p>
             </div>
         </section>
 
@@ -57,7 +57,6 @@ $receptionistCount = $counts['receptionist'] ?? 0;
                 <select>
                     <option>All Staff</option>
                     <option>Doctors</option>
-                    <option>Nurses</option>
                     <option>Receptionists</option>
                 </select>
             </div>
@@ -74,10 +73,10 @@ $receptionistCount = $counts['receptionist'] ?? 0;
                 </thead>
                 <tbody>
                     <?php foreach ($staff as $s): ?>
-                    <tr class="<?php echo $s['role'] === 'doctor' ? 'doctor-row' : ($s['role'] === 'nurse' ? 'nurse-row' : 'receptionist-row'); ?>">
+                    <tr class="<?php echo $s['role'] === 'doctor' ? 'doctor-row' : 'receptionist-row'; ?>">
                         <td><?php echo htmlspecialchars($s['name']); ?></td>
                         <td><span class="badge"><?php echo htmlspecialchars(ucfirst($s['role'])); ?></span></td>
-                        <td><?php echo $s['role'] === 'doctor' ? 'General' : ($s['role'] === 'nurse' ? 'General' : 'Front Desk'); ?></td>
+                        <td><?php echo $s['role'] === 'doctor' ? htmlspecialchars($s['department'] ?? '—') : 'Front Desk'; ?></td>
                         <td><?php echo htmlspecialchars($s['email']); ?></td>
                         <td><span class="badge cyan">Active</span></td>
                         <td>

@@ -80,7 +80,7 @@ if ($pdo && $user) {
             </div>
             <div class="summary-card">
                 <h4>Billing Status</h4>
-                <div class="summary-value">$<?php echo number_format($totalDue, 0); ?></div>
+                <div class="summary-value"><?php echo mc_format_money($totalDue, 0); ?></div>
                 <p class="summary-change">Due</p>
             </div>
         </section>

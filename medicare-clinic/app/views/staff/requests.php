@@ -21,6 +21,7 @@ if ($pdo && $user) {
 
 $scheduled = !empty($_GET['scheduled']);
 $error = !empty($_GET['error']);
+$minScheduleDate = '2026-01-01';
 ?>
 <div class="app-shell">
     <?php echo $sidebar; ?>
@@ -71,7 +72,7 @@ $error = !empty($_GET['error']);
                                 <form method="post" action="index.php?page=staff-requests" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
                                     <input type="hidden" name="schedule_request" value="1" />
                                     <input type="hidden" name="request_id" value="<?php echo (int) $r['id']; ?>" />
-                                    <input type="date" name="appointment_date" required />
+                                    <input type="date" name="appointment_date" min="<?php echo htmlspecialchars($minScheduleDate); ?>" max="2030-12-31" required />
                                     <select name="appointment_time" required>
                                         <option value="">Time</option>
                                         <option value="08:00">08:00 AM</option>

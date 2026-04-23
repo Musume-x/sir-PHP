@@ -35,7 +35,6 @@ if ($pdo) {
                     <option>All Roles</option>
                     <option>Admin</option>
                     <option>Doctor</option>
-                    <option>Nurse</option>
                     <option>Receptionist</option>
                     <option>Patient</option>
                 </select>

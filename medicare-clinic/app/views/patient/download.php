@@ -55,7 +55,7 @@ if ($type === 'prescription') {
     $content = "MediCare Clinic - Invoice\n" . str_repeat('=', 40) . "\n\n";
     $content .= "Invoice #: " . $data['invoice_number'] . "\n";
     $content .= "Service: " . $data['service'] . "\n";
-    $content .= "Amount: $" . number_format((float)$data['amount'], 2) . "\n";
+    $content .= 'Amount: ' . mc_format_money((float) $data['amount']) . "\n";
     $content .= "Status: " . $data['status'] . "\n";
     $content .= "Date: " . $data['created_at'] . "\n";
 }

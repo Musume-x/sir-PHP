@@ -22,7 +22,6 @@ if ($pdo && $user) {
     $refillNeeded = count(array_filter($prescriptions, fn($r) => (int)($r['refill_requested'] ?? 0) === 1));
 }
 $requested = !empty($_GET['requested']);
-$refilled = !empty($_GET['refilled']);
 ?>
 <div class="app-shell">
     <?php echo $sidebar; ?>
@@ -43,10 +42,6 @@ $refilled = !empty($_GET['refilled']);
         <?php if ($requested): ?>
             <p class="auth-success">Refill requested.</p>
         <?php endif; ?>
-        <?php if ($refilled): ?>
-            <p class="auth-success">Refill recorded.</p>
-        <?php endif; ?>
-
         <section class="grid-3">
             <div class="summary-card">
                 <h4>Active Prescriptions</h4>
@@ -99,9 +94,11 @@ $refilled = !empty($_GET['refilled']);
                             <a href="index.php?page=patient-view&type=prescription&id=<?php echo (int)$p['id']; ?>" class="btn-outline small">View</a>
                             <?php if ($p['status'] === 'active'): ?>
                                 <?php if (empty($p['refill_requested'])): ?>
-                                    <a href="index.php?page=patient-prescriptions&request_refill=<?php echo (int)$p['id']; ?>" class="btn-outline small">Request Refill</a>
+                                    <a href="index.php?page=patient-prescriptions&request_refill=<?php echo (int)$p['id']; ?>" class="btn-outline small">Request refill</a>
                                 <?php elseif (!empty($p['refill_approved'])): ?>
-                                    <a href="index.php?page=patient-prescriptions&refill=<?php echo (int)$p['id']; ?>" class="btn-outline small">Refill</a>
+                                    <span class="badge cyan small">Refill approved</span>
+                                <?php else: ?>
+                                    <span class="btn-outline small" style="pointer-events:none;opacity:0.85;">Awaiting doctor</span>
                                 <?php endif; ?>
                             <?php else: ?>
                                 <a href="index.php?page=patient-download&type=prescription&id=<?php echo (int)$p['id']; ?>" class="btn-outline small">Download</a>

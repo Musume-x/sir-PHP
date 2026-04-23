@@ -21,13 +21,19 @@ try {
             email TEXT NOT NULL UNIQUE,
             password_hash TEXT NOT NULL,
             name TEXT NOT NULL,
-            role TEXT NOT NULL CHECK(role IN ('admin','doctor','nurse','receptionist','patient')),
+            role TEXT NOT NULL CHECK(role IN ('admin','doctor','receptionist','patient')),
             department TEXT,
             created_at TEXT DEFAULT CURRENT_TIMESTAMP
         )
     ");
     try {
         $pdo->exec("ALTER TABLE users ADD COLUMN department TEXT");
+    } catch (PDOException $e) {
+    }
+
+    // Legacy DBs may still allow 'nurse' in CHECK; migrate accounts to receptionist
+    try {
+        $pdo->exec("UPDATE users SET role = 'receptionist' WHERE role = 'nurse'");
     } catch (PDOException $e) {
     }
 
@@ -50,10 +56,19 @@ try {
             email_notifications INTEGER DEFAULT 1,
             sms_notifications INTEGER DEFAULT 1,
             appointment_reminders INTEGER DEFAULT 1,
+            availability_schedule TEXT,
+            work_preferences TEXT,
             updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (user_id) REFERENCES users(id)
         )
     ");
+
+    foreach (['availability_schedule' => 'TEXT', 'work_preferences' => 'TEXT'] as $col => $sqlType) {
+        try {
+            $pdo->exec("ALTER TABLE user_profiles ADD COLUMN {$col} {$sqlType}");
+        } catch (PDOException $e) {
+        }
+    }
 
     $pdo->exec("
         CREATE TABLE IF NOT EXISTS appointments (
@@ -155,7 +170,6 @@ try {
         $stmt->execute(['doctor3@medicare.com', $defaultPassword, 'Dr. Zenrick Reconalla', 'doctor', 'Orthopedics']);
         $stmt->execute(['doctor4@medicare.com', $defaultPassword, 'Dr. Michael Sarol', 'doctor', 'General Medicine']);
         $stmt->execute(['doctor5@medicare.com', $defaultPassword, 'Dr. Jane Cooper', 'doctor', 'Cardiology']);
-        $stmt->execute(['nurse@medicare.com', $defaultPassword, 'Nurse Demo', 'nurse', null]);
         $stmt->execute(['receptionist@medicare.com', $defaultPassword, 'Receptionist Demo', 'receptionist', null]);
         $stmt->execute(['patient@medicare.com', $defaultPassword, 'Patient Demo', 'patient', null]);
     }

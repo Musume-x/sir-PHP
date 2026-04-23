@@ -66,7 +66,17 @@ $error = !empty($_GET['error']);
                         <h3>Availability & Preferences</h3>
                     </div>
                     <div style="padding: 20px;">
-                        <p>Mon–Fri · 9:00 AM – 5:00 PM (default clinic hours)</p>
+                        <p style="margin: 0 0 12px; color: var(--mc-gray); font-size: 0.9rem;">
+                            Set your usual clinic hours and scheduling notes. Patients see default clinic hours until you publish updates here.
+                        </p>
+                        <div class="form-group">
+                            <label>Availability (days &amp; hours)</label>
+                            <textarea name="availability_schedule" rows="4" placeholder="e.g., Mon–Fri 8:00 AM – 4:00 PM; closed holidays"><?php echo htmlspecialchars($profile['availability_schedule'] ?? ''); ?></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Preferences &amp; notes</label>
+                            <textarea name="work_preferences" rows="4" placeholder="e.g., prefer morning consults; telehealth on request"><?php echo htmlspecialchars($profile['work_preferences'] ?? ''); ?></textarea>
+                        </div>
                     </div>
                 </div>
             </section>

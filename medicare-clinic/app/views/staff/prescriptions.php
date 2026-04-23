@@ -4,19 +4,34 @@ require_once __DIR__ . '/../../../config/database.php';
 $pdo = $GLOBALS['pdo'] ?? null;
 $user = current_user();
 $role = ucfirst(current_role() ?? 'Staff');
+$rawRole = current_role() ?? '';
 $sidebar = render_staff_sidebar();
 $prescriptions = [];
 if ($pdo) {
-    $stmt = $pdo->query("
-        SELECT p.*, u1.name as patient_name, u2.name as doctor_name
-        FROM prescriptions p
-        JOIN users u1 ON p.patient_id = u1.id
-        JOIN users u2 ON p.doctor_id = u2.id
-        ORDER BY p.created_at DESC
-    ");
-    $prescriptions = $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
+    if ($rawRole === 'doctor' && !empty($user['id'])) {
+        $stmt = $pdo->prepare("
+            SELECT p.*, u1.name as patient_name, u2.name as doctor_name
+            FROM prescriptions p
+            JOIN users u1 ON p.patient_id = u1.id
+            JOIN users u2 ON p.doctor_id = u2.id
+            WHERE p.doctor_id = ?
+            ORDER BY p.created_at DESC
+        ");
+        $stmt->execute([(int) $user['id']]);
+        $prescriptions = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } else {
+        $stmt = $pdo->query("
+            SELECT p.*, u1.name as patient_name, u2.name as doctor_name
+            FROM prescriptions p
+            JOIN users u1 ON p.patient_id = u1.id
+            JOIN users u2 ON p.doctor_id = u2.id
+            ORDER BY p.created_at DESC
+        ");
+        $prescriptions = $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
+    }
 }
 $approved = !empty($_GET['approved']);
+$approveError = !empty($_GET['error']);
 ?>
 <div class="app-shell">
     <?php echo $sidebar; ?>
@@ -33,6 +48,9 @@ $approved = !empty($_GET['approved']);
 
         <?php if ($approved): ?>
             <p class="auth-success">Refill approved.</p>
+        <?php endif; ?>
+        <?php if ($approveError): ?>
+            <p class="auth-error">That refill could not be approved. Only the prescribing doctor can approve pending refills.</p>
         <?php endif; ?>
 
         <section class="panel">
@@ -69,10 +87,18 @@ $approved = !empty($_GET['approved']);
                             <?php endif; ?>
                         </td>
                         <td>
-                            <?php if (!empty($p['refill_requested']) && empty($p['refill_approved'])): ?>
+                            <?php
+                            $canApproveRefill = $rawRole === 'doctor'
+                                && (int) ($p['doctor_id'] ?? 0) === (int) ($user['id'] ?? 0)
+                                && !empty($p['refill_requested'])
+                                && empty($p['refill_approved']);
+                            ?>
+                            <?php if ($canApproveRefill): ?>
                                 <a href="index.php?page=staff-prescriptions&approve_refill=<?php echo (int)$p['id']; ?>" class="btn-primary small">Approve Refill</a>
+                            <?php elseif (!empty($p['refill_requested']) && empty($p['refill_approved']) && $rawRole === 'receptionist'): ?>
+                                <span class="btn-outline small" title="Only the prescribing doctor can approve">Pending doctor</span>
                             <?php else: ?>
-                                <span class="btn-outline small">View</span>
+                                <span class="btn-outline small">—</span>
                             <?php endif; ?>
                         </td>
                     </tr>

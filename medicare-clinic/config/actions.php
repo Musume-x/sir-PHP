@@ -45,12 +45,16 @@ function handle_patient_billing_pay(): ?string
     if (!$pdo) {
         return 'index.php?page=patient-billing&error=1';
     }
-    $stmt = $pdo->prepare("UPDATE invoices SET status = 'paid', paid_at = datetime('now') WHERE id = ? AND patient_id = ?");
+    $stmt = $pdo->prepare("SELECT invoice_number FROM invoices WHERE id = ? AND patient_id = ? AND status != 'paid'");
     $stmt->execute([$pay, $user['id']]);
-    if ($stmt->rowCount()) {
-        $stmt = $pdo->prepare("INSERT INTO notifications (user_id, title, message, type) VALUES (?,?,?,?)");
-        $stmt->execute([$user['id'], 'Payment Received', "Payment for invoice #$pay has been recorded.", 'billing']);
+    $invNo = $stmt->fetchColumn();
+    if (!$invNo) {
+        return 'index.php?page=patient-billing';
     }
+    $pdo->prepare("UPDATE invoices SET status = 'paid', paid_at = datetime('now') WHERE id = ? AND patient_id = ?")
+        ->execute([$pay, $user['id']]);
+    $stmt = $pdo->prepare("INSERT INTO notifications (user_id, title, message, type) VALUES (?,?,?,?)");
+    $stmt->execute([$user['id'], 'Payment Received', 'Payment for invoice ' . $invNo . ' has been recorded.', 'billing']);
     return 'index.php?page=patient-billing&paid=1';
 }
 
@@ -118,9 +122,8 @@ function handle_patient_profile_save(): ?string
 function handle_patient_prescription_refill(): ?string
 {
     $request_refill = (int) ($_GET['request_refill'] ?? $_POST['request_refill'] ?? 0);
-    $refill = (int) ($_GET['refill'] ?? $_POST['refill'] ?? 0);
     $user = current_user();
-    if (!$user) {
+    if (!$user || $user['role'] !== 'patient') {
         return null;
     }
     require_once __DIR__ . '/database.php';
@@ -128,14 +131,9 @@ function handle_patient_prescription_refill(): ?string
         return null;
     }
     if ($request_refill) {
-        $stmt = $pdo->prepare("UPDATE prescriptions SET refill_requested = 1 WHERE id = ? AND patient_id = ?");
+        $stmt = $pdo->prepare("UPDATE prescriptions SET refill_requested = 1 WHERE id = ? AND patient_id = ? AND status = 'active'");
         $stmt->execute([$request_refill, $user['id']]);
         return 'index.php?page=patient-prescriptions&requested=1';
-    }
-    if ($refill) {
-        $stmt = $pdo->prepare("UPDATE prescriptions SET refill_requested = 0, refill_approved = 1 WHERE id = ? AND patient_id = ?");
-        $stmt->execute([$refill, $user['id']]);
-        return 'index.php?page=patient-prescriptions&refilled=1';
     }
     return null;
 }
@@ -144,20 +142,24 @@ function handle_staff_prescription_approve_refill(): ?string
 {
     $approve = (int) ($_GET['approve_refill'] ?? $_POST['approve_refill'] ?? 0);
     $user = current_user();
-    if (!$user || !in_array($user['role'], ['doctor', 'nurse', 'receptionist'], true)) {
+    if (!$user || $user['role'] !== 'doctor' || !$approve) {
         return null;
     }
     require_once __DIR__ . '/database.php';
-    if (!$pdo || !$approve) {
+    if (!$pdo) {
         return null;
     }
-    $stmt = $pdo->prepare("UPDATE prescriptions SET refill_approved = 1, refill_requested = 0 WHERE id = ?");
-    $stmt->execute([$approve]);
-    $row = $pdo->query("SELECT patient_id FROM prescriptions WHERE id = $approve")->fetch(PDO::FETCH_ASSOC);
-    if ($row) {
-        $pdo->prepare("INSERT INTO notifications (user_id, title, message, type) VALUES (?,?,?,?)")
-            ->execute([$row['patient_id'], 'Refill Approved', 'Your prescription refill request has been approved.', 'prescription']);
+    $doctorId = (int) $user['id'];
+    $stmt = $pdo->prepare("SELECT patient_id FROM prescriptions WHERE id = ? AND doctor_id = ? AND refill_requested = 1 AND COALESCE(refill_approved, 0) = 0");
+    $stmt->execute([$approve, $doctorId]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (!$row) {
+        return 'index.php?page=staff-prescriptions&error=1';
     }
+    $pdo->prepare("UPDATE prescriptions SET refill_approved = 1, refill_requested = 0 WHERE id = ? AND doctor_id = ?")
+        ->execute([$approve, $doctorId]);
+    $pdo->prepare("INSERT INTO notifications (user_id, title, message, type) VALUES (?,?,?,?)")
+        ->execute([(int) $row['patient_id'], 'Refill Approved', 'Your prescription refill request has been approved by your doctor.', 'prescription']);
     return 'index.php?page=staff-prescriptions&approved=1';
 }
 
@@ -167,7 +169,7 @@ function handle_staff_profile_save(): ?string
         return null;
     }
     $user = current_user();
-    if (!$user || !in_array($user['role'], ['doctor', 'nurse', 'receptionist'], true)) {
+    if (!$user || !in_array($user['role'], ['doctor', 'receptionist'], true)) {
         return null;
     }
     require_once __DIR__ . '/database.php';
@@ -176,8 +178,11 @@ function handle_staff_profile_save(): ?string
     }
     $name = trim($_POST['name'] ?? $user['name']);
     $phone = trim($_POST['phone'] ?? '');
+    $availability = trim($_POST['availability_schedule'] ?? '');
+    $preferences = trim($_POST['work_preferences'] ?? '');
     $pdo->prepare("UPDATE users SET name = ? WHERE id = ?")->execute([$name, $user['id']]);
-    $pdo->prepare("INSERT INTO user_profiles (user_id, phone, updated_at) VALUES (?, ?, datetime('now')) ON CONFLICT(user_id) DO UPDATE SET phone = excluded.phone, updated_at = datetime('now')")->execute([$user['id'], $phone]);
+    $pdo->prepare("INSERT INTO user_profiles (user_id, phone, availability_schedule, work_preferences, updated_at) VALUES (?,?,?,?, datetime('now')) ON CONFLICT(user_id) DO UPDATE SET phone = excluded.phone, availability_schedule = excluded.availability_schedule, work_preferences = excluded.work_preferences, updated_at = datetime('now')")
+        ->execute([$user['id'], $phone, $availability, $preferences]);
     return 'index.php?page=staff-profile&saved=1';
 }
 
@@ -199,6 +204,10 @@ function handle_doctor_schedule_request(): ?string
     $date = trim($_POST['appointment_date'] ?? '');
     $time = trim($_POST['appointment_time'] ?? '');
     if (!$requestId || !$date || !$time) {
+        return 'index.php?page=staff-requests&error=1';
+    }
+    $dt = DateTime::createFromFormat('Y-m-d', $date);
+    if (!$dt || $dt->format('Y-m-d') !== $date || $date < '2026-01-01') {
         return 'index.php?page=staff-requests&error=1';
     }
 

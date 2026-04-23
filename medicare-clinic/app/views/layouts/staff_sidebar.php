@@ -5,9 +5,7 @@ function render_staff_sidebar(): string
     $role = ucfirst($rawRole);
     $current_page = $_GET['page'] ?? 'staff';
     $dashboardPage = 'staff';
-    if ($rawRole === 'nurse') {
-        $dashboardPage = 'nurse';
-    } elseif ($rawRole === 'receptionist') {
+    if ($rawRole === 'receptionist') {
         $dashboardPage = 'receptionist';
     }
 

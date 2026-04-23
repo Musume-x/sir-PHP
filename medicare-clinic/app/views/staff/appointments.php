@@ -8,6 +8,7 @@ $rawRole = current_role() ?? null;
 $sidebar = render_staff_sidebar();
 $appointments = [];
 $today = date('Y-m-d');
+$listFromDate = '2026-01-01';
 if ($pdo) {
     if ($rawRole === 'doctor' && !empty($user['id'])) {
         $stmt = $pdo->prepare("
@@ -15,20 +16,22 @@ if ($pdo) {
             FROM appointments a
             JOIN users u1 ON a.patient_id = u1.id
             JOIN users u2 ON a.doctor_id = u2.id
-            WHERE a.doctor_id = ?
+            WHERE a.doctor_id = ? AND a.appointment_date >= ?
             ORDER BY a.appointment_date, a.appointment_time
         ");
-        $stmt->execute([(int) $user['id']]);
+        $stmt->execute([(int) $user['id'], $listFromDate]);
         $appointments = $stmt->fetchAll(PDO::FETCH_ASSOC);
     } else {
-        $stmt = $pdo->query("
+        $stmt = $pdo->prepare("
             SELECT a.*, u1.name as patient_name, u2.name as doctor_name
             FROM appointments a
             JOIN users u1 ON a.patient_id = u1.id
             JOIN users u2 ON a.doctor_id = u2.id
+            WHERE a.appointment_date >= ?
             ORDER BY a.appointment_date, a.appointment_time
         ");
-        $appointments = $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
+        $stmt->execute([$listFromDate]);
+        $appointments = $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 }
 $todayAppointments = array_filter($appointments, fn($a) => $a['appointment_date'] === $today);

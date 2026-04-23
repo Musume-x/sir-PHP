@@ -69,7 +69,7 @@ function route_request(string $page): void
                     require __DIR__ . '/../app/views/admin/register_user.php';
                     return;
                 }
-                $allowedRoles = ['admin', 'doctor', 'nurse', 'receptionist'];
+                $allowedRoles = ['admin', 'doctor', 'receptionist'];
                 if (!in_array($role, $allowedRoles, true)) {
                     $role = 'doctor';
                 }
@@ -122,6 +122,11 @@ function route_request(string $page): void
 
         case 'admin-billing':
             require_role(['admin']);
+            $redirect = handle_admin_action();
+            if ($redirect) {
+                header("Location: $redirect");
+                exit;
+            }
             require __DIR__ . '/../app/views/admin/billing.php';
             break;
 
@@ -136,12 +141,7 @@ function route_request(string $page): void
             break;
 
         case 'staff':
-            require_role(['doctor', 'nurse', 'receptionist']);
-            require __DIR__ . '/../app/views/staff/dashboard.php';
-            break;
-
-        case 'nurse':
-            require_role(['nurse']);
+            require_role(['doctor', 'receptionist']);
             require __DIR__ . '/../app/views/staff/dashboard.php';
             break;
 
@@ -151,7 +151,7 @@ function route_request(string $page): void
             break;
 
         case 'staff-appointments':
-            require_role(['doctor', 'nurse', 'receptionist']);
+            require_role(['doctor', 'receptionist']);
             require __DIR__ . '/../app/views/staff/appointments.php';
             break;
 
@@ -166,27 +166,37 @@ function route_request(string $page): void
             break;
 
         case 'staff-patients':
-            require_role(['doctor', 'nurse', 'receptionist']);
+            require_role(['doctor', 'receptionist']);
             require __DIR__ . '/../app/views/staff/patients.php';
             break;
 
         case 'staff-records':
-            require_role(['doctor', 'nurse', 'receptionist']);
+            require_role(['doctor', 'receptionist']);
             require __DIR__ . '/../app/views/staff/records.php';
             break;
 
         case 'staff-prescriptions':
-            require_role(['doctor', 'nurse', 'receptionist']);
+            require_role(['doctor', 'receptionist']);
+            $redirect = handle_staff_prescription_approve_refill();
+            if ($redirect) {
+                header("Location: $redirect");
+                exit;
+            }
             require __DIR__ . '/../app/views/staff/prescriptions.php';
             break;
 
         case 'staff-billing':
-            require_role(['doctor', 'nurse', 'receptionist']);
+            require_role(['doctor', 'receptionist']);
             require __DIR__ . '/../app/views/staff/billing.php';
             break;
 
         case 'staff-profile':
-            require_role(['doctor', 'nurse', 'receptionist']);
+            require_role(['doctor', 'receptionist']);
+            $redirect = handle_staff_profile_save();
+            if ($redirect) {
+                header("Location: $redirect");
+                exit;
+            }
             require __DIR__ . '/../app/views/staff/profile.php';
             break;
 
@@ -265,36 +275,6 @@ function route_request(string $page): void
             require __DIR__ . '/../app/views/patient/download.php';
             break;
 
-        case 'staff-prescriptions':
-            require_role(['doctor', 'nurse', 'receptionist']);
-            $redirect = handle_staff_prescription_approve_refill();
-            if ($redirect) {
-                header("Location: $redirect");
-                exit;
-            }
-            require __DIR__ . '/../app/views/staff/prescriptions.php';
-            break;
-
-        case 'staff-profile':
-            require_role(['doctor', 'nurse', 'receptionist']);
-            $redirect = handle_staff_profile_save();
-            if ($redirect) {
-                header("Location: $redirect");
-                exit;
-            }
-            require __DIR__ . '/../app/views/staff/profile.php';
-            break;
-
-        case 'admin-billing':
-            require_role(['admin']);
-            $redirect = handle_admin_action();
-            if ($redirect) {
-                header("Location: $redirect");
-                exit;
-            }
-            require __DIR__ . '/../app/views/admin/billing.php';
-            break;
-
         default:
             require __DIR__ . '/../app/views/landing.php';
             break;
@@ -306,7 +286,7 @@ function redirect_after_login(string $role): void
     if ($role === 'admin') {
         header('Location: index.php?page=admin');
     } elseif ($role === 'nurse') {
-        header('Location: index.php?page=nurse');
+        header('Location: index.php?page=receptionist');
     } elseif ($role === 'receptionist') {
         header('Location: index.php?page=receptionist');
     } elseif (in_array($role, ['doctor'], true)) {

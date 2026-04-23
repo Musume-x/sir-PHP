@@ -67,7 +67,7 @@ $sidebar = render_patient_sidebar();
                 <?php elseif ($type === 'invoice'): ?>
                     <p><strong>Invoice #:</strong> <?php echo htmlspecialchars($data['invoice_number']); ?></p>
                     <p><strong>Service:</strong> <?php echo htmlspecialchars($data['service']); ?></p>
-                    <p><strong>Amount:</strong> $<?php echo number_format((float)$data['amount'], 2); ?></p>
+                    <p><strong>Amount:</strong> <?php echo mc_format_money((float) $data['amount']); ?></p>
                     <p><strong>Status:</strong> <?php echo htmlspecialchars($data['status']); ?></p>
                     <p><strong>Date:</strong> <?php echo htmlspecialchars($data['created_at']); ?></p>
                 <?php endif; ?>

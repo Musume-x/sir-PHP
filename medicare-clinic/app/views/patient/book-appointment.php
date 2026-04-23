@@ -9,7 +9,6 @@ if ($pdo) {
     $stmt = $pdo->query("SELECT id, name, department FROM users WHERE role = 'doctor' ORDER BY name");
     $doctors = $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
 }
-$success = !empty($_GET['success']);
 $error = !empty($_GET['error']);
 ?>
 <div class="app-shell">
@@ -25,9 +24,6 @@ $error = !empty($_GET['error']);
             </div>
         </header>
 
-        <?php if ($success): ?>
-            <p class="auth-success">Request sent. The doctor will choose your appointment date and time.</p>
-        <?php endif; ?>
         <?php if ($error): ?>
             <p class="auth-error">Please select a doctor.</p>
         <?php endif; ?>

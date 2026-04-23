@@ -1,6 +1,15 @@
 <?php
 
 if (session_status() === PHP_SESSION_NONE) {
+    $secure = !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off';
+    session_set_cookie_params([
+        'lifetime' => 0,
+        'path' => '/',
+        'domain' => '',
+        'secure' => $secure,
+        'httponly' => true,
+        'samesite' => 'Lax',
+    ]);
     session_start();
 }
 
@@ -66,7 +75,7 @@ function register_user(string $name, string $email, string $password, string $ro
     if (strlen($password) < 6) {
         return 'Password must be at least 6 characters.';
     }
-    $allowedRoles = ['admin', 'doctor', 'nurse', 'receptionist', 'patient'];
+    $allowedRoles = ['admin', 'doctor', 'receptionist', 'patient'];
     if (!in_array($role, $allowedRoles, true)) {
         $role = 'patient';
     }
@@ -90,7 +99,9 @@ function register_user(string $name, string $email, string $password, string $ro
 function logout_user(): void
 {
     $_SESSION = [];
-    session_destroy();
+    if (session_status() === PHP_SESSION_ACTIVE) {
+        session_destroy();
+    }
 }
 
 function current_user()

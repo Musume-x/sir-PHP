@@ -50,17 +50,17 @@ $paid = !empty($_GET['paid']);
         <section class="grid-3">
             <div class="summary-card">
                 <h4>Total Due</h4>
-                <div class="summary-value">$<?php echo number_format($totalDue, 0); ?></div>
+                <div class="summary-value"><?php echo mc_format_money($totalDue, 0); ?></div>
                 <p class="summary-change">Pending</p>
             </div>
             <div class="summary-card">
                 <h4>Paid This Month</h4>
-                <div class="summary-value">$<?php echo number_format($paidThisMonth, 0); ?></div>
+                <div class="summary-value"><?php echo mc_format_money($paidThisMonth, 0); ?></div>
                 <p class="summary-change positive"><?php echo count(array_filter($invoices, fn($i) => $i['status']==='paid' && $i['paid_at'] && date('Y-m', strtotime($i['paid_at']))===date('Y-m'))); ?> invoices</p>
             </div>
             <div class="summary-card">
                 <h4>All Time</h4>
-                <div class="summary-value">$<?php echo number_format($allTimePaid, 0); ?></div>
+                <div class="summary-value"><?php echo mc_format_money($allTimePaid, 0); ?></div>
                 <p class="summary-change">Total paid</p>
             </div>
         </section>
@@ -86,7 +86,7 @@ $paid = !empty($_GET['paid']);
                         <td><?php echo htmlspecialchars($inv['invoice_number']); ?></td>
                         <td><?php echo htmlspecialchars($inv['created_at']); ?></td>
                         <td><?php echo htmlspecialchars($inv['service']); ?></td>
-                        <td>$<?php echo number_format((float)$inv['amount'], 2); ?></td>
+                        <td><?php echo mc_format_money((float) $inv['amount']); ?></td>
                         <td>
                             <?php if ($inv['status'] === 'paid'): ?>
                                 <span class="badge cyan">Paid</span>
@@ -96,7 +96,10 @@ $paid = !empty($_GET['paid']);
                         </td>
                         <td>
                             <?php if ($inv['status'] !== 'paid'): ?>
-                                <a href="index.php?page=patient-billing&pay=<?php echo (int)$inv['id']; ?>" class="btn-primary small">Pay Now</a>
+                                <form method="post" action="index.php?page=patient-billing" style="display:inline;">
+                                    <input type="hidden" name="pay" value="<?php echo (int) $inv['id']; ?>" />
+                                    <button type="submit" class="btn-primary small">Pay now</button>
+                                </form>
                             <?php endif; ?>
                             <a href="index.php?page=patient-view&type=invoice&id=<?php echo (int)$inv['id']; ?>" class="btn-outline small">View</a>
                             <a href="index.php?page=patient-download&type=invoice&id=<?php echo (int)$inv['id']; ?>" class="btn-outline small">Download</a>

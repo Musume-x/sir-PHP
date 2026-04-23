@@ -11,7 +11,6 @@ $password = 'password';
 $passwordHash = password_hash($password, PASSWORD_DEFAULT);
 
 $staff = [
-    ['email' => 'nurse@medicare.com', 'name' => 'Nurse Demo', 'role' => 'nurse'],
     ['email' => 'receptionist@medicare.com', 'name' => 'Receptionist Demo', 'role' => 'receptionist'],
 ];
 

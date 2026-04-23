@@ -66,7 +66,6 @@ $register_success = $register_success ?? '';
                     <label for="role">Account Type</label>
                     <select id="role" name="role" required>
                         <option value="doctor" <?php echo ($_POST['role'] ?? '') === 'doctor' ? 'selected' : ''; ?>>Doctor</option>
-                        <option value="nurse" <?php echo ($_POST['role'] ?? '') === 'nurse' ? 'selected' : ''; ?>>Nurse</option>
                         <option value="receptionist" <?php echo ($_POST['role'] ?? '') === 'receptionist' ? 'selected' : ''; ?>>Receptionist</option>
                         <option value="admin" <?php echo ($_POST['role'] ?? '') === 'admin' ? 'selected' : ''; ?>>Admin</option>
                     </select>

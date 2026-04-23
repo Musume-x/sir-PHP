@@ -41,17 +41,17 @@ if ($pdo) {
         <section class="grid-3">
             <div class="summary-card">
                 <h4>Today's Payments</h4>
-                <div class="summary-value">$<?php echo number_format($totals['paid_today'], 0); ?></div>
+                <div class="summary-value"><?php echo mc_format_money($totals['paid_today'], 0); ?></div>
                 <p class="summary-change">Paid today</p>
             </div>
             <div class="summary-card">
                 <h4>Pending</h4>
-                <div class="summary-value">$<?php echo number_format($totals['pending'], 0); ?></div>
+                <div class="summary-value"><?php echo mc_format_money($totals['pending'], 0); ?></div>
                 <p class="summary-change">Unpaid invoices</p>
             </div>
             <div class="summary-card">
                 <h4>Overdue</h4>
-                <div class="summary-value">$<?php echo number_format($totals['overdue'], 0); ?></div>
+                <div class="summary-value"><?php echo mc_format_money($totals['overdue'], 0); ?></div>
                 <p class="summary-change">Overdue</p>
             </div>
         </section>
@@ -77,7 +77,7 @@ if ($pdo) {
                         <td><?php echo htmlspecialchars($inv['invoice_number']); ?></td>
                         <td><?php echo htmlspecialchars($inv['patient_name'] ?? '—'); ?></td>
                         <td><?php echo htmlspecialchars($inv['service']); ?></td>
-                        <td>$<?php echo number_format((float)$inv['amount'], 2); ?></td>
+                        <td><?php echo mc_format_money((float) $inv['amount']); ?></td>
                         <td><span class="badge <?php echo $inv['status'] === 'paid' ? 'cyan' : ''; ?>"><?php echo htmlspecialchars($inv['status']); ?></span></td>
                         <td><?php echo htmlspecialchars($inv['created_at']); ?></td>
                     </tr>

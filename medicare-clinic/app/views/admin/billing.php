@@ -47,22 +47,22 @@ $paid = !empty($_GET['paid']);
         <section class="grid-4">
             <div class="summary-card">
                 <h4>Total Revenue</h4>
-                <div class="summary-value">$<?php echo number_format($revenue, 0); ?></div>
+                <div class="summary-value"><?php echo mc_format_money($revenue, 0); ?></div>
                 <p class="summary-change">Paid</p>
             </div>
             <div class="summary-card">
                 <h4>Pending Payments</h4>
-                <div class="summary-value">$<?php echo number_format($pending, 0); ?></div>
+                <div class="summary-value"><?php echo mc_format_money($pending, 0); ?></div>
                 <p class="summary-change">—</p>
             </div>
             <div class="summary-card">
                 <h4>This Month</h4>
-                <div class="summary-value">$<?php echo number_format($revenue, 0); ?></div>
+                <div class="summary-value"><?php echo mc_format_money($revenue, 0); ?></div>
                 <p class="summary-change">—</p>
             </div>
             <div class="summary-card">
                 <h4>Overdue</h4>
-                <div class="summary-value">$<?php echo number_format($overdue, 0); ?></div>
+                <div class="summary-value"><?php echo mc_format_money($overdue, 0); ?></div>
                 <p class="summary-change">—</p>
             </div>
         </section>
@@ -89,7 +89,7 @@ $paid = !empty($_GET['paid']);
                         <td><?php echo htmlspecialchars($inv['invoice_number']); ?></td>
                         <td><?php echo htmlspecialchars($inv['patient_name'] ?? '—'); ?></td>
                         <td><?php echo htmlspecialchars($inv['service']); ?></td>
-                        <td>$<?php echo number_format((float)$inv['amount'], 2); ?></td>
+                        <td><?php echo mc_format_money((float) $inv['amount']); ?></td>
                         <td><?php echo htmlspecialchars($inv['created_at']); ?></td>
                         <td><span class="badge <?php echo $inv['status'] === 'paid' ? 'cyan' : ''; ?>"><?php echo htmlspecialchars($inv['status']); ?></span></td>
                         <td>

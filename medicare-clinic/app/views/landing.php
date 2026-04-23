@@ -45,7 +45,7 @@
         </div>
         <div class="card">
             <h3>For Staff</h3>
-            <p>Doctors, nurses, and receptionists get focused tools to manage daily clinical workflows.</p>
+            <p>Doctors and receptionists get focused tools to manage daily clinical workflows.</p>
         </div>
         <div class="card">
             <h3>For Patients</h3>
