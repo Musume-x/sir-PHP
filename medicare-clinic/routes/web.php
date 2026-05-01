@@ -182,6 +182,16 @@ function route_request(string $page): void
                 header("Location: $redirect");
                 exit;
             }
+            $redirect = handle_doctor_issue_prescription();
+            if ($redirect) {
+                header("Location: $redirect");
+                exit;
+            }
+            $redirect = handle_doctor_reject_prescription();
+            if ($redirect) {
+                header("Location: $redirect");
+                exit;
+            }
             require __DIR__ . '/../app/views/staff/prescriptions.php';
             break;
 
@@ -227,12 +237,17 @@ function route_request(string $page): void
 
         case 'patient-billing':
             require_role(['patient']);
-            $redirect = handle_patient_billing_pay();
+            require __DIR__ . '/../app/views/patient/billing.php';
+            break;
+
+        case 'patient-checkout':
+            require_role(['patient']);
+            $redirect = handle_patient_checkout();
             if ($redirect) {
                 header("Location: $redirect");
                 exit;
             }
-            require __DIR__ . '/../app/views/patient/billing.php';
+            require __DIR__ . '/../app/views/patient/checkout.php';
             break;
 
         case 'patient-notifications':
@@ -262,16 +277,21 @@ function route_request(string $page): void
                 header("Location: $redirect");
                 exit;
             }
+            $redirect = handle_patient_prescription_request();
+            if ($redirect) {
+                header("Location: $redirect");
+                exit;
+            }
             require __DIR__ . '/../app/views/patient/prescriptions.php';
             break;
 
         case 'patient-view':
-            require_role(['patient']);
+            require_role(['patient', 'doctor', 'receptionist']);
             require __DIR__ . '/../app/views/patient/view-detail.php';
             break;
 
         case 'patient-download':
-            require_role(['patient']);
+            require_role(['patient', 'doctor', 'receptionist']);
             require __DIR__ . '/../app/views/patient/download.php';
             break;
 
@@ -285,8 +305,6 @@ function redirect_after_login(string $role): void
 {
     if ($role === 'admin') {
         header('Location: index.php?page=admin');
-    } elseif ($role === 'nurse') {
-        header('Location: index.php?page=receptionist');
     } elseif ($role === 'receptionist') {
         header('Location: index.php?page=receptionist');
     } elseif (in_array($role, ['doctor'], true)) {

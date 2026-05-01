@@ -4,16 +4,28 @@ require_once __DIR__ . '/../../../config/database.php';
 $pdo = $GLOBALS['pdo'] ?? null;
 $user = current_user();
 $role = ucfirst(current_role() ?? 'Staff');
+$rawRole = current_role() ?? '';
 $sidebar = render_staff_sidebar();
 $invoices = [];
 $totals = ['pending' => 0, 'paid_today' => 0, 'overdue' => 0];
 if ($pdo) {
-    $stmt = $pdo->query("
-        SELECT i.*, u.name as patient_name
-        FROM invoices i
-        JOIN users u ON i.patient_id = u.id
-        ORDER BY i.created_at DESC
-    ");
+    if ($rawRole === 'doctor') {
+        $stmt = $pdo->prepare("
+            SELECT i.*, u.name as patient_name
+            FROM invoices i
+            JOIN users u ON i.patient_id = u.id
+            WHERE i.doctor_id = ?
+            ORDER BY i.created_at DESC
+        ");
+        $stmt->execute([(int)$user['id']]);
+    } else {
+        $stmt = $pdo->query("
+            SELECT i.*, u.name as patient_name
+            FROM invoices i
+            JOIN users u ON i.patient_id = u.id
+            ORDER BY i.created_at DESC
+        ");
+    }
     $invoices = $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
     foreach ($invoices as $inv) {
         if ($inv['status'] === 'pending') $totals['pending'] += (float)$inv['amount'];
@@ -69,6 +81,7 @@ if ($pdo) {
                         <th>Amount</th>
                         <th>Status</th>
                         <th>Date</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -80,6 +93,10 @@ if ($pdo) {
                         <td><?php echo mc_format_money((float) $inv['amount']); ?></td>
                         <td><span class="badge <?php echo $inv['status'] === 'paid' ? 'cyan' : ''; ?>"><?php echo htmlspecialchars($inv['status']); ?></span></td>
                         <td><?php echo htmlspecialchars($inv['created_at']); ?></td>
+                        <td>
+                            <a href="index.php?page=patient-view&type=invoice&id=<?php echo (int)$inv['id']; ?>" class="btn-outline small">View</a>
+                            <a href="index.php?page=patient-download&type=invoice&id=<?php echo (int)$inv['id']; ?>" class="btn-outline small">Download</a>
+                        </td>
                     </tr>
                     <?php endforeach; ?>
                     <?php if (empty($invoices)): ?>

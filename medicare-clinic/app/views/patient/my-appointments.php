@@ -20,14 +20,15 @@ if ($pdo && $user) {
     $stmt->execute([$pid]);
     $requests = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+    $from2026 = '2026-01-01';
     $stmt = $pdo->prepare("
         SELECT a.*, u.name as doctor_name
         FROM appointments a
         JOIN users u ON a.doctor_id = u.id
-        WHERE a.patient_id = ?
+        WHERE a.patient_id = ? AND a.appointment_date >= ?
         ORDER BY a.appointment_date DESC, a.appointment_time DESC
     ");
-    $stmt->execute([$pid]);
+    $stmt->execute([$pid, $from2026]);
     $appointments = $stmt->fetchAll(PDO::FETCH_ASSOC);
     $today = date('Y-m-d');
     $upcomingCount = count(array_filter($appointments, function ($a) use ($today) {

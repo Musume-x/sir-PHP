@@ -121,18 +121,38 @@ try {
     ");
 
     $pdo->exec("
+        CREATE TABLE IF NOT EXISTS prescription_requests (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            patient_id INTEGER NOT NULL,
+            doctor_id INTEGER NOT NULL,
+            medication_name TEXT NOT NULL,
+            reason TEXT,
+            status TEXT DEFAULT 'pending',
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (patient_id) REFERENCES users(id),
+            FOREIGN KEY (doctor_id) REFERENCES users(id)
+        )
+    ");
+
+    $pdo->exec("
         CREATE TABLE IF NOT EXISTS invoices (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             patient_id INTEGER NOT NULL,
+            doctor_id INTEGER,
             invoice_number TEXT NOT NULL,
             service TEXT NOT NULL,
             amount REAL NOT NULL,
             status TEXT DEFAULT 'pending',
             paid_at TEXT,
             created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (patient_id) REFERENCES users(id)
+            FOREIGN KEY (patient_id) REFERENCES users(id),
+            FOREIGN KEY (doctor_id) REFERENCES users(id)
         )
     ");
+    try {
+        $pdo->exec("ALTER TABLE invoices ADD COLUMN doctor_id INTEGER");
+    } catch (PDOException $e) {
+    }
 
     $pdo->exec("
         CREATE TABLE IF NOT EXISTS notifications (
@@ -144,6 +164,18 @@ try {
             read_at TEXT,
             created_at TEXT DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (user_id) REFERENCES users(id)
+        )
+    ");
+
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS payments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            invoice_id INTEGER NOT NULL,
+            payment_method TEXT NOT NULL,
+            transaction_ref TEXT NOT NULL,
+            amount REAL NOT NULL,
+            paid_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (invoice_id) REFERENCES invoices(id)
         )
     ");
 

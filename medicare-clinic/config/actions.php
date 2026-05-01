@@ -14,6 +14,7 @@ function handle_patient_book(): ?string
         return null;
     }
     require_once __DIR__ . '/database.php';
+    $pdo = $GLOBALS['pdo'] ?? null;
     if (!$pdo) {
         return 'index.php?page=patient-book&error=1';
     }
@@ -24,17 +25,27 @@ function handle_patient_book(): ?string
     if (!$doctor_id) {
         return 'index.php?page=patient-book&error=1';
     }
+
+    // Standard consultation fee
+    $fee = 500.00;
+    $invNo = 'INV-' . strtoupper(substr(uniqid(), -6));
+
     $stmt = $pdo->prepare("INSERT INTO appointment_requests (patient_id, doctor_id, reason, department, status) VALUES (?,?,?,?, 'pending')");
     $stmt->execute([$patient_id, $doctor_id, $reason, $department]);
+
+    // Create an invoice for this appointment
+    $stmt = $pdo->prepare("INSERT INTO invoices (patient_id, doctor_id, invoice_number, service, amount, status) VALUES (?, ?, ?, ?, ?, 'pending')");
+    $stmt->execute([$patient_id, $doctor_id, $invNo, 'Consultation Fee (' . $department . ')', $fee]);
+
     $stmt = $pdo->prepare("INSERT INTO notifications (user_id, title, message, type) VALUES (?,?,?,?)");
-    $stmt->execute([$patient_id, 'Appointment Requested', "Your appointment request has been sent. The doctor will schedule the date and time.", 'appointment']);
+    $stmt->execute([$patient_id, 'Appointment Requested', "Your request has been sent. Please pay the invoice ($invNo) for ₱$fee to proceed.", 'appointment']);
+
     return 'index.php?page=patient-appointments&requested=1';
 }
 
-function handle_patient_billing_pay(): ?string
+function handle_patient_checkout(): ?string
 {
-    $pay = (int) ($_GET['pay'] ?? $_POST['pay'] ?? 0);
-    if (!$pay) {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST' || empty($_POST['process_payment'])) {
         return null;
     }
     $user = current_user();
@@ -42,20 +53,47 @@ function handle_patient_billing_pay(): ?string
         return null;
     }
     require_once __DIR__ . '/database.php';
+    $pdo = $GLOBALS['pdo'] ?? null;
     if (!$pdo) {
         return 'index.php?page=patient-billing&error=1';
     }
-    $stmt = $pdo->prepare("SELECT invoice_number FROM invoices WHERE id = ? AND patient_id = ? AND status != 'paid'");
-    $stmt->execute([$pay, $user['id']]);
-    $invNo = $stmt->fetchColumn();
-    if (!$invNo) {
-        return 'index.php?page=patient-billing';
+
+    $invoice_id = (int) ($_POST['invoice_id'] ?? 0);
+    $method = trim($_POST['payment_method'] ?? 'Card');
+    $ref = trim($_POST['transaction_ref'] ?? ('REF-' . strtoupper(substr(uniqid(), -8))));
+    
+    // Validate invoice
+    $stmt = $pdo->prepare("SELECT amount, invoice_number FROM invoices WHERE id = ? AND patient_id = ? AND status != 'paid'");
+    $stmt->execute([$invoice_id, $user['id']]);
+    $invoice = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    if (!$invoice) {
+        return 'index.php?page=patient-billing&error=invalid_invoice';
     }
-    $pdo->prepare("UPDATE invoices SET status = 'paid', paid_at = datetime('now') WHERE id = ? AND patient_id = ?")
-        ->execute([$pay, $user['id']]);
-    $stmt = $pdo->prepare("INSERT INTO notifications (user_id, title, message, type) VALUES (?,?,?,?)");
-    $stmt->execute([$user['id'], 'Payment Received', 'Payment for invoice ' . $invNo . ' has been recorded.', 'billing']);
-    return 'index.php?page=patient-billing&paid=1';
+
+    $amount = (float) $invoice['amount'];
+
+    try {
+        $pdo->beginTransaction();
+
+        // 1. Record the payment
+        $stmt = $pdo->prepare("INSERT INTO payments (invoice_id, payment_method, transaction_ref, amount) VALUES (?, ?, ?, ?)");
+        $stmt->execute([$invoice_id, $method, $ref, $amount]);
+
+        // 2. Update invoice status
+        $stmt = $pdo->prepare("UPDATE invoices SET status = 'paid', paid_at = datetime('now') WHERE id = ?");
+        $stmt->execute([$invoice_id]);
+
+        // 3. Create notification
+        $stmt = $pdo->prepare("INSERT INTO notifications (user_id, title, message, type) VALUES (?,?,?,?)");
+        $stmt->execute([$user['id'], 'Payment Successful', "Payment of " . mc_format_money($amount) . " for invoice {$invoice['invoice_number']} has been processed via $method.", 'billing']);
+
+        $pdo->commit();
+        return 'index.php?page=patient-billing&paid=1';
+    } catch (Exception $e) {
+        $pdo->rollBack();
+        return 'index.php?page=patient-billing&error=payment_failed';
+    }
 }
 
 function handle_patient_notification_read(): ?string
@@ -67,6 +105,7 @@ function handle_patient_notification_read(): ?string
         return null;
     }
     require_once __DIR__ . '/database.php';
+    $pdo = $GLOBALS['pdo'] ?? null;
     if (!$pdo) {
         return null;
     }
@@ -92,6 +131,7 @@ function handle_patient_profile_save(): ?string
         return null;
     }
     require_once __DIR__ . '/database.php';
+    $pdo = $GLOBALS['pdo'] ?? null;
     if (!$pdo) {
         return 'index.php?page=patient-profile&error=1';
     }
@@ -119,6 +159,38 @@ function handle_patient_profile_save(): ?string
     return 'index.php?page=patient-profile&saved=1';
 }
 
+function handle_patient_prescription_request(): ?string
+{
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST' || empty($_POST['request_new_prescription'])) {
+        return null;
+    }
+    $user = current_user();
+    if (!$user || $user['role'] !== 'patient') {
+        return null;
+    }
+    require_once __DIR__ . '/database.php';
+    $pdo = $GLOBALS['pdo'] ?? null;
+    if (!$pdo) {
+        return 'index.php?page=patient-prescriptions&error=1';
+    }
+    $patient_id = (int) $user['id'];
+    $doctor_id = (int) ($_POST['doctor_id'] ?? 0);
+    $medication = trim($_POST['medication_name'] ?? '');
+    $reason = trim($_POST['reason'] ?? '');
+    
+    if (!$doctor_id || !$medication) {
+        return 'index.php?page=patient-prescriptions&error=missing_fields';
+    }
+    
+    $stmt = $pdo->prepare("INSERT INTO prescription_requests (patient_id, doctor_id, medication_name, reason, status) VALUES (?,?,?,?, 'pending')");
+    $stmt->execute([$patient_id, $doctor_id, $medication, $reason]);
+    
+    $stmt = $pdo->prepare("INSERT INTO notifications (user_id, title, message, type) VALUES (?,?,?,?)");
+    $stmt->execute([$patient_id, 'Prescription Requested', "Your request for $medication has been sent to the doctor.", 'prescription']);
+    
+    return 'index.php?page=patient-prescriptions&requested=1';
+}
+
 function handle_patient_prescription_refill(): ?string
 {
     $request_refill = (int) ($_GET['request_refill'] ?? $_POST['request_refill'] ?? 0);
@@ -127,6 +199,7 @@ function handle_patient_prescription_refill(): ?string
         return null;
     }
     require_once __DIR__ . '/database.php';
+    $pdo = $GLOBALS['pdo'] ?? null;
     if (!$pdo) {
         return null;
     }
@@ -138,6 +211,94 @@ function handle_patient_prescription_refill(): ?string
     return null;
 }
 
+function handle_doctor_issue_prescription(): ?string
+{
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST' || empty($_POST['issue_from_request'])) {
+        return null;
+    }
+    $user = current_user();
+    if (!$user || $user['role'] !== 'doctor') {
+        return null;
+    }
+    require_once __DIR__ . '/database.php';
+    $pdo = $GLOBALS['pdo'] ?? null;
+    if (!$pdo) {
+        return 'index.php?page=staff-prescriptions&error=1';
+    }
+
+    $requestId = (int) ($_POST['request_id'] ?? 0);
+    $medication = trim($_POST['medication'] ?? '');
+    $dosage = trim($_POST['dosage'] ?? '');
+    $duration = (int) ($_POST['duration'] ?? 7);
+
+    if (!$requestId || !$medication || !$dosage) {
+        return 'index.php?page=staff-prescriptions&error=1';
+    }
+
+    // 1. Get the request details
+    $stmt = $pdo->prepare("SELECT patient_id FROM prescription_requests WHERE id = ? AND doctor_id = ? AND status = 'pending'");
+    $stmt->execute([$requestId, (int)$user['id']]);
+    $req = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$req) {
+        return 'index.php?page=staff-prescriptions&error=1';
+    }
+
+    $patientId = (int)$req['patient_id'];
+
+    try {
+        $pdo->beginTransaction();
+
+        // 2. Insert into prescriptions table
+        $stmt = $pdo->prepare("INSERT INTO prescriptions (patient_id, doctor_id, medication, dosage, duration_days, status) VALUES (?, ?, ?, ?, ?, 'active')");
+        $stmt->execute([$patientId, (int)$user['id'], $medication, $dosage, $duration]);
+
+        // 3. Update request status
+        $stmt = $pdo->prepare("UPDATE prescription_requests SET status = 'issued' WHERE id = ?");
+        $stmt->execute([$requestId]);
+
+        // 4. Notify patient
+        $stmt = $pdo->prepare("INSERT INTO notifications (user_id, title, message, type) VALUES (?,?,?,?)");
+        $stmt->execute([$patientId, 'Prescription Issued', "Doctor {$user['name']} has issued your prescription for $medication.", 'prescription']);
+
+        $pdo->commit();
+        return 'index.php?page=staff-prescriptions&approved=1';
+    } catch (Exception $e) {
+        $pdo->rollBack();
+        return 'index.php?page=staff-prescriptions&error=1';
+    }
+}
+
+function handle_doctor_reject_prescription(): ?string
+{
+    $rejectId = (int) ($_GET['reject_prescription_request'] ?? 0);
+    $user = current_user();
+    if (!$user || $user['role'] !== 'doctor' || !$rejectId) {
+        return null;
+    }
+    require_once __DIR__ . '/database.php';
+    $pdo = $GLOBALS['pdo'] ?? null;
+    if (!$pdo) {
+        return null;
+    }
+
+    $stmt = $pdo->prepare("SELECT patient_id, medication_name FROM prescription_requests WHERE id = ? AND doctor_id = ? AND status = 'pending'");
+    $stmt->execute([$rejectId, (int)$user['id']]);
+    $req = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$req) {
+        return 'index.php?page=staff-prescriptions&error=1';
+    }
+
+    $stmt = $pdo->prepare("UPDATE prescription_requests SET status = 'rejected' WHERE id = ?");
+    $stmt->execute([$rejectId]);
+
+    $stmt = $pdo->prepare("INSERT INTO notifications (user_id, title, message, type) VALUES (?,?,?,?)");
+    $stmt->execute([$req['patient_id'], 'Request Rejected', "Your request for {$req['medication_name']} has been declined by the doctor.", 'prescription']);
+
+    return 'index.php?page=staff-prescriptions&rejected=1';
+}
+
 function handle_staff_prescription_approve_refill(): ?string
 {
     $approve = (int) ($_GET['approve_refill'] ?? $_POST['approve_refill'] ?? 0);
@@ -146,6 +307,7 @@ function handle_staff_prescription_approve_refill(): ?string
         return null;
     }
     require_once __DIR__ . '/database.php';
+    $pdo = $GLOBALS['pdo'] ?? null;
     if (!$pdo) {
         return null;
     }
@@ -173,6 +335,7 @@ function handle_staff_profile_save(): ?string
         return null;
     }
     require_once __DIR__ . '/database.php';
+    $pdo = $GLOBALS['pdo'] ?? null;
     if (!$pdo) {
         return 'index.php?page=staff-profile&error=1';
     }
@@ -196,6 +359,7 @@ function handle_doctor_schedule_request(): ?string
         return null;
     }
     require_once __DIR__ . '/database.php';
+    $pdo = $GLOBALS['pdo'] ?? null;
     if (!$pdo) {
         return 'index.php?page=staff-requests&error=1';
     }
@@ -206,9 +370,10 @@ function handle_doctor_schedule_request(): ?string
     if (!$requestId || !$date || !$time) {
         return 'index.php?page=staff-requests&error=1';
     }
+    $today = date('Y-m-d');
     $dt = DateTime::createFromFormat('Y-m-d', $date);
-    if (!$dt || $dt->format('Y-m-d') !== $date || $date < '2026-01-01') {
-        return 'index.php?page=staff-requests&error=1';
+    if (!$dt || $dt->format('Y-m-d') !== $date || $date < $today || $date < '2026-01-01') {
+        return 'index.php?page=staff-requests&error=invalid_date';
     }
 
     $stmt = $pdo->prepare("SELECT * FROM appointment_requests WHERE id = ? AND doctor_id = ? AND status = 'pending' LIMIT 1");
@@ -243,6 +408,7 @@ function handle_admin_action(): ?string
         return null;
     }
     require_once __DIR__ . '/database.php';
+    $pdo = $GLOBALS['pdo'] ?? null;
     if (!$pdo) {
         return null;
     }

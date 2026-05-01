@@ -1,6 +1,13 @@
 <?php
 
 if (session_status() === PHP_SESSION_NONE) {
+    // Ensure we have a local session save path to avoid XAMPP folder errors
+    $sessionPath = __DIR__ . '/../data/sessions';
+    if (!is_dir($sessionPath)) {
+        mkdir($sessionPath, 0755, true);
+    }
+    session_save_path($sessionPath);
+
     $secure = !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off';
     session_set_cookie_params([
         'lifetime' => 0,

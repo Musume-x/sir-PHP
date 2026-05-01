@@ -21,7 +21,8 @@ if ($pdo && $user) {
 
 $scheduled = !empty($_GET['scheduled']);
 $error = !empty($_GET['error']);
-$minScheduleDate = '2026-01-01';
+$todayDate = date('Y-m-d');
+$minScheduleDate = ($todayDate > '2026-01-01') ? $todayDate : '2026-01-01';
 ?>
 <div class="app-shell">
     <?php echo $sidebar; ?>
@@ -40,7 +41,7 @@ $minScheduleDate = '2026-01-01';
             <p class="auth-success">Appointment scheduled successfully.</p>
         <?php endif; ?>
         <?php if ($error): ?>
-            <p class="auth-error">Unable to schedule. Please try again.</p>
+            <p class="auth-error"><?php echo ($_GET['error'] === 'invalid_date') ? 'Selected date is in the past. Please choose today or a future date.' : 'Unable to schedule. Please try again.'; ?></p>
         <?php endif; ?>
 
         <section class="panel">

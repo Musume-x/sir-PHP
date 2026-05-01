@@ -76,10 +76,15 @@ $error = !empty($_GET['error']);
                     </div>
                     <div style="padding: 20px;">
                         <p style="margin: 0 0 14px; color: var(--mc-gray);">
-                            After you submit, you’ll see this request in <strong>My Appointments</strong> as pending until the doctor schedules it.
+                            After you submit, an invoice for the consultation fee will be generated. You can pay it in the <strong>Billing</strong> section.
                         </p>
+                        <div class="summary-card" style="margin-bottom: 20px; background: var(--mc-light-blue); border: 1px solid var(--mc-blue);">
+                            <h4 style="color: var(--mc-blue);">Consultation Fee</h4>
+                            <div class="summary-value" style="color: var(--mc-blue);">₱500.00</div>
+                            <p class="summary-change" style="color: var(--mc-gray);">Payable upon request</p>
+                        </div>
                         <div style="margin-top: 20px;">
-                            <button type="submit" class="btn-primary full">Send Request</button>
+                            <button type="submit" class="btn-primary full">Send Request & Create Invoice</button>
                         </div>
                     </div>
                 </div>

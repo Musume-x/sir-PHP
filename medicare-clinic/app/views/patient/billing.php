@@ -9,7 +9,13 @@ $totalDue = 0;
 $paidThisMonth = 0;
 if ($pdo && $user) {
     $pid = (int) $user['id'];
-    $stmt = $pdo->prepare("SELECT * FROM invoices WHERE patient_id = ? ORDER BY created_at DESC");
+    $stmt = $pdo->prepare("
+        SELECT i.*, u.name AS doctor_name 
+        FROM invoices i 
+        LEFT JOIN users u ON i.doctor_id = u.id 
+        WHERE i.patient_id = ? 
+        ORDER BY i.created_at DESC
+    ");
     $stmt->execute([$pid]);
     $invoices = $stmt->fetchAll(PDO::FETCH_ASSOC);
     foreach ($invoices as $inv) {
@@ -73,7 +79,7 @@ $paid = !empty($_GET['paid']);
                 <thead>
                     <tr>
                         <th>Invoice #</th>
-                        <th>Date</th>
+                        <th>Doctor</th>
                         <th>Service</th>
                         <th>Amount</th>
                         <th>Status</th>
@@ -84,7 +90,7 @@ $paid = !empty($_GET['paid']);
                     <?php foreach ($invoices as $inv): ?>
                     <tr>
                         <td><?php echo htmlspecialchars($inv['invoice_number']); ?></td>
-                        <td><?php echo htmlspecialchars($inv['created_at']); ?></td>
+                        <td><?php echo htmlspecialchars($inv['doctor_name'] ?? 'Clinic'); ?></td>
                         <td><?php echo htmlspecialchars($inv['service']); ?></td>
                         <td><?php echo mc_format_money((float) $inv['amount']); ?></td>
                         <td>
@@ -96,10 +102,7 @@ $paid = !empty($_GET['paid']);
                         </td>
                         <td>
                             <?php if ($inv['status'] !== 'paid'): ?>
-                                <form method="post" action="index.php?page=patient-billing" style="display:inline;">
-                                    <input type="hidden" name="pay" value="<?php echo (int) $inv['id']; ?>" />
-                                    <button type="submit" class="btn-primary small">Pay now</button>
-                                </form>
+                                <a href="index.php?page=patient-checkout&invoice_id=<?php echo (int) $inv['id']; ?>" class="btn-primary small">Pay now</a>
                             <?php endif; ?>
                             <a href="index.php?page=patient-view&type=invoice&id=<?php echo (int)$inv['id']; ?>" class="btn-outline small">View</a>
                             <a href="index.php?page=patient-download&type=invoice&id=<?php echo (int)$inv['id']; ?>" class="btn-outline small">Download</a>

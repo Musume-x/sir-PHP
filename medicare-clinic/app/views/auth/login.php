@@ -20,12 +20,12 @@
                 <p class="auth-success">Registration successful. You can now log in.</p>
             <?php endif; ?>
 
-            <form method="post" class="auth-form">
+            <form method="post" class="auth-form" autocomplete="off">
                 <div class="form-group">
                     <label for="email">Email</label>
                     <div class="input-icon">
                         <span class="icon">@</span>
-                        <input type="email" id="email" name="email" placeholder="Enter Email ID" required />
+                        <input type="email" id="email" name="email" placeholder="Enter Email ID" required autocomplete="off" />
                     </div>
                 </div>
 
@@ -33,7 +33,7 @@
                     <label for="password">Password</label>
                     <div class="input-icon">
                         <span class="icon">••</span>
-                        <input type="password" id="password" name="password" placeholder="Enter Password" required />
+                        <input type="password" id="password" name="password" placeholder="Enter Password" required autocomplete="new-password" />
                     </div>
                 </div>
 

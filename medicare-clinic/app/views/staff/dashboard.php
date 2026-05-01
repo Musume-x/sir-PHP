@@ -13,6 +13,7 @@ $todayApptCount = 0;
 $upcomingCount = 0;
 $pendingRequests = 0;
 $patientCount = 0;
+$totalEarnings = 0;
 
 if ($pdo && $user) {
     $uid = (int) $user['id'];
@@ -29,6 +30,11 @@ if ($pdo && $user) {
         $stmt = $pdo->prepare("SELECT COUNT(*) FROM appointment_requests WHERE doctor_id = ? AND status = 'pending'");
         $stmt->execute([$uid]);
         $pendingRequests = (int) $stmt->fetchColumn();
+
+        // Calculate doctor earnings
+        $stmt = $pdo->prepare("SELECT SUM(amount) FROM invoices WHERE doctor_id = ? AND status = 'paid'");
+        $stmt->execute([$uid]);
+        $totalEarnings = (float) $stmt->fetchColumn();
     } else {
         $stmt = $pdo->prepare("SELECT COUNT(*) FROM appointments WHERE appointment_date = ? AND status NOT IN ('cancelled')");
         $stmt->execute([$today]);
@@ -94,15 +100,23 @@ if ($pdo && $user) {
                 <p class="summary-change"><?php echo htmlspecialchars($today); ?></p>
             </div>
             <div class="summary-card">
-                <h4><?php echo $rawRole === 'doctor' ? 'Upcoming (2026+)' : 'Upcoming'; ?></h4>
-                <div class="summary-value"><?php echo $upcomingCount; ?></div>
-                <p class="summary-change">Scheduled visits</p>
+                <h4><?php echo $rawRole === 'doctor' ? 'Pending requests' : 'Upcoming Appointments'; ?></h4>
+                <div class="summary-value"><?php echo $rawRole === 'doctor' ? $pendingRequests : $upcomingCount; ?></div>
+                <p class="summary-change"><?php echo $rawRole === 'doctor' ? 'Need scheduling' : 'Scheduled visits'; ?></p>
             </div>
+            <?php if ($rawRole === 'doctor'): ?>
+            <div class="summary-card" style="background: var(--mc-light-blue); border: 1px solid var(--mc-blue);">
+                <h4 style="color: var(--mc-blue);">Total Earnings</h4>
+                <div class="summary-value" style="color: var(--mc-blue);"><?php echo mc_format_money($totalEarnings); ?></div>
+                <p class="summary-change" style="color: var(--mc-gray);">From consultations</p>
+            </div>
+            <?php else: ?>
             <div class="summary-card">
-                <h4><?php echo $rawRole === 'doctor' ? 'Pending requests' : 'Patients'; ?></h4>
-                <div class="summary-value"><?php echo $rawRole === 'doctor' ? $pendingRequests : $patientCount; ?></div>
-                <p class="summary-change"><?php echo $rawRole === 'doctor' ? 'Need scheduling' : 'Registered'; ?></p>
+                <h4>Patients</h4>
+                <div class="summary-value"><?php echo $patientCount; ?></div>
+                <p class="summary-change">Registered</p>
             </div>
+            <?php endif; ?>
         </section>
 
         <section class="grid-2">
